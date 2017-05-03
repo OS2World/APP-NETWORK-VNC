@@ -1,0 +1,87 @@
+<WARPIN>
+  <HEAD>
+
+    <PCK INDEX=100
+         PACKAGEID="Digi\VNC\VNC Libraries\0\0\1"
+         TITLE="VNC common libraries"
+         TARGET="$(WARPIN_DEFAULTAPPSPATH)\VNC"
+         LONGFILENAMES
+         NODESELECT
+         BASE
+         CREATEOBJECT='WPFolder|VNC|<WP_DESKTOP>|OBJECTID=<VNCFOLDER>;ALWAYSSORT=YES;OPEN=DEFAULT;'
+         CREATEOBJECT='WPProgram|ReadMe|<VNCFOLDER>|EXENAME=e.exe;OBJECTID=<VNCFOLDER_README>;TITLE=ReadMe;PROGTYPE=PM;PARAMETERS=$(1)\README;STARTUPDIR=$(1);'
+         >VNC Libraries</PCK>
+
+    <PCK INDEX=1
+         PACKAGEID="Digi\VNC\VNC Viewer\<!-- BL:..\bin\vncviewer.exe -->"
+         TITLE="VNC Viewer"
+         TARGET="$(100)"
+         FIXED
+         SELECT
+         LONGFILENAMES
+         REQUIRES=100
+         CREATEOBJECT="REPLACE WPProgram|VNC Viewer|<VNCFOLDER>|EXENAME=$(1)\vncviewer.exe;OBJECTID=<VNCVIEWER>;"
+         >VNC Viewer</PCK>
+
+    <PCK INDEX=2
+         PACKAGEID="Digi\VNC\VNC Server\<!-- BL:..\bin\vncserver.exe -->"
+         TITLE="VNC Server"
+         TARGET="$(100)"
+         FIXED
+         SELECT
+         LONGFILENAMES
+         REQUIRES=100
+         CREATEOBJECT="REPLACE WPProgram|VNC Server|<VNCFOLDER>|EXENAME=$(1)\vncserver.exe;OBJECTID=<VNCSERVER>;"
+         KILLPROCESS="vncserver.exe"
+         >VNC Server</PCK>
+
+    <PCK INDEX=3
+         PACKAGEID="Digi\VNC\VNC Server\<!-- BL:..\bin\vnckbd.sys -->"
+         TITLE="Keyboard support driver for VNC Server"
+         TARGET="$(100)"
+         FIXED
+         SELECT
+         REQUIRES=2
+         EXECUTE="CONFIGSYS | $(100)\drvins.cmd | -d ?:\ -f $(100)\vnckbd.sys -i 1"
+         DEEXECUTE="$(100)\drvins.cmd | -d ?:\ -f $(100)\vnckbd.sys -i 0"
+         >Keyboard support driver for VNC Server</PCK>
+
+    <PCK INDEX=4
+         PACKAGEID="Digi\VNC\KbdXKey\<!-- BL:..\bin\kbdxkey.exe -->"
+         TITLE="Keyboard map utility"
+         TARGET="$(WARPIN_DEFAULTAPPSPATH)\VNC"
+         FIXED
+         LONGFILENAMES
+         REQUIRES=100
+         CREATEOBJECT="REPLACE WPProgram|Keyboard map|<VNCFOLDER>|EXENAME=$(1)\kbdxkey.exe;OBJECTID=<KBDXKEY>;"
+         >Keyboard map utility</PCK>
+  </HEAD>
+  <BODY>
+
+    <PAGE INDEX=1 TYPE=README>
+      <NEXTBUTTON TARGET=2>~Next</NEXTBUTTON>
+      <README EXTRACTFROMPCK="100">README</README>
+      <TEXT>
+        Select "Next" to continue or "Cancel" to abort installation.
+      </TEXT>
+    </PAGE>
+
+    <PAGE INDEX=2 TYPE=README>
+      <NEXTBUTTON TARGET=3>~Next</NEXTBUTTON>
+      <README EXTRACTFROMPCK="100">COPYING</README>
+      <TEXT>
+        Please read this license.
+        Select "Next" to continue or "Cancel" to abort installation.
+      </TEXT>
+    </PAGE>
+
+    <PAGE INDEX=3 TYPE=CONTAINER>
+      <NEXTBUTTON TARGET=0>I~nstall</NEXTBUTTON>
+      <TEXT>
+        Installing VNC software.
+        Please select the packages which are to be installed.
+      </TEXT>
+    </PAGE>
+
+  </BODY>
+</WARPIN>

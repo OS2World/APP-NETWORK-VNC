@@ -1,0 +1,70 @@
+;
+; Cyrillic code page 866 character codes <-> keysym codes table.
+;
+; Digi 2016.
+;
+
+0xA9,         0x6ca     ; © -> XK_Cyrillic_shorti
+0xE6,         0x6c3     ; æ -> XK_Cyrillic_tse
+0xE3,         0x6d5     ; ã -> XK_Cyrillic_u
+0xAA,         0x6cb     ; ª -> XK_Cyrillic_ka
+0xA5,         0x6c5     ; ¥ -> XK_Cyrillic_ie
+0xAD,         0x6ce     ; ­ -> XK_Cyrillic_en
+0xA3,         0x6c7     ; £ -> XK_Cyrillic_ghe
+0xE8,         0x6db     ; è -> XK_Cyrillic_sha
+0xE9,         0x6dd     ; é -> XK_Cyrillic_shcha
+0xA7,         0x6da     ; § -> XK_Cyrillic_ze
+0xE5,         0x6c8     ; å -> XK_Cyrillic_ha
+0xEA,         0x6df     ; ê -> XK_Cyrillic_hardsign
+0xE4,         0x6c6     ; ä -> XK_Cyrillic_ef
+0xEB,         0x6d9     ; ë -> XK_Cyrillic_yeru
+0xA2,         0x6d7     ; ¢ -> XK_Cyrillic_ve
+0xA0,         0x6c1     ;   -> XK_Cyrillic_a
+0xAF,         0x6d0     ; ¯ -> XK_Cyrillic_pe
+0xE0,         0x6d2     ; à -> XK_Cyrillic_er
+0xAE,         0x6cf     ; ® -> XK_Cyrillic_o
+0xAB,         0x6cc     ; « -> XK_Cyrillic_el
+0xA4,         0x6c4     ; ¤ -> XK_Cyrillic_de
+0xA6,         0x6d6     ; ¦ -> XK_Cyrillic_zhe
+0xED,         0x6dc     ; í -> XK_Cyrillic_e
+0xEF,         0x6d1     ; ï -> XK_Cyrillic_ya
+0xE7,         0x6de     ; ç -> XK_Cyrillic_che
+0xE1,         0x6d3     ; á -> XK_Cyrillic_es
+0xAC,         0x6cd     ; ¬ -> XK_Cyrillic_em
+0xA8,         0x6c9     ; ¨ -> XK_Cyrillic_i
+0xE2,         0x6d4     ; â -> XK_Cyrillic_te
+0xEC,         0x6d8     ; ì -> XK_Cyrillic_softsign
+0xA1,         0x6c2     ; ¡ -> XK_Cyrillic_be
+0xEE,         0x6c0     ; î -> XK_Cyrillic_yu
+0x89,         0x6ea     ; ‰ -> XK_Cyrillic_SHORTI
+0x96,         0x6e3     ; – -> XK_Cyrillic_TSE
+0x93,         0x6f5     ; “ -> XK_Cyrillic_U
+0x8A,         0x6eb     ; Š -> XK_Cyrillic_KA
+0x85,         0x6e5     ; … -> XK_Cyrillic_IE
+0x8D,         0x6ee     ;  -> XK_Cyrillic_EN
+0x83,         0x6e7     ; ƒ -> XK_Cyrillic_GHE
+0x98,         0x6fb     ; ˜ -> XK_Cyrillic_SHA
+0x99,         0x6fd     ; ™ -> XK_Cyrillic_SHCHA
+0x87,         0x6fa     ; ‡ -> XK_Cyrillic_ZE
+0x95,         0x6e8     ; • -> XK_Cyrillic_HA
+0x9A,         0x6ff     ; š -> XK_Cyrillic_HARDSIGN
+0x94,         0x6e6     ; ” -> XK_Cyrillic_EF
+0x9B,         0x6f9     ; › -> XK_Cyrillic_YERU
+0x82,         0x6f7     ; ‚ -> XK_Cyrillic_VE
+0x80,         0x6e1     ; € -> XK_Cyrillic_A
+0x8F,         0x6f0     ;  -> XK_Cyrillic_PE
+0x90,         0x6f2     ;  -> XK_Cyrillic_ER
+0x8E,         0x6ef     ; Ž -> XK_Cyrillic_O
+0x8B,         0x6ec     ; ‹ -> XK_Cyrillic_EL
+0x84,         0x6e4     ; „ -> XK_Cyrillic_DE
+0x86,         0x6f6     ; † -> XK_Cyrillic_ZHE
+0x9D,         0x6fc     ;  -> XK_Cyrillic_E
+0x9F,         0x6f1     ; Ÿ -> XK_Cyrillic_YA
+0x97,         0x6fe     ; — -> XK_Cyrillic_CHE
+0x91,         0x6f3     ; ‘ -> XK_Cyrillic_ES
+0x8C,         0x6ed     ; Œ -> XK_Cyrillic_EM
+0x88,         0x6e9     ; ˆ -> XK_Cyrillic_I
+0x92,         0x6f4     ; ’ -> XK_Cyrillic_TE
+0x9C,         0x6f8     ; œ -> XK_Cyrillic_SOFTSIGN
+0x81,         0x6e2     ;  -> XK_Cyrillic_BE
+0x9E,         0x6e0     ; ž -> XK_Cyrillic_YU

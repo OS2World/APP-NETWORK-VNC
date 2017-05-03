@@ -1,0 +1,18 @@
+Running external programs on certain events.
+
+Viewer logged in
+The program should return a non-empty line on standard output to allow viewer connection or empty line to immediatly disconnect viewer.
+
+Viewer gone
+Program will be executed when viewer ends the session.
+
+Ctrl-Alt-Del handler
+Program will be executed when viewer sending combination of keys Ctrl-Alt-Del.
+
+The tag %character can be used in commands to run programs. This tag will be replaced at run-time by a string representation of the option value:
+ %h  - client host address,
+ %r  - 1 for reverse connection, otherwise 0,
+ %v  - 1 for view-only connection, otherwise 0,
+ %i  - string obtained from "Viewer logged in" program,
+ %o  - 1 when other logged-in viewers present, otherwise 0,
+ %%  - '%' character.

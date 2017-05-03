@@ -1,0 +1,385 @@
+#ifndef OS2_INCLUDED
+#include <os2.h>
+#endif
+#include "resource.h"
+#include <vncpm.h>
+
+ICON     IDICON_VIEWWIN           resources\viewer.ico
+ICON     IDICON_FILE              resources\file.ico
+ICON     IDICON_FOLDER            resources\folder.ico
+ICON     IDICON_FILE_HIDDEN       resources\file-hidden.ico
+ICON     IDICON_FOLDER_HIDDEN     resources\folder-hidden.ico
+POINTER  IDPTR_DEFPTR             resources\default.ptr
+
+MESSAGETABLE
+{
+  IDM_INVALID_DEST_HOST   "The destination host defined incorrectly. "
+                          "Allowable format: host[:port]"
+  IDM_INVALID_HOST        "The host defined incorrectly.\1"
+                          "Allowable format: host[:display]"
+  IDM_FORGET_QUESTION     "Forget the host %0 and their configured options?"
+  IDM_INI_OPEN_ERROR      "There was an error loading or creating configuration."
+  IDM_TIP_HOST            "host[:display]"
+  IDM_TIP_DESTHOST        "host[:port]\1Destination host to connect\1via %0"
+  IDM_TIP_LISTEN_DESTHOST "host[:port]\1Destination host to connect\1via server"
+  IDM_TIP_CHARSET         "Applies to chat messages and file names\1For example: WINDOWS-1251"
+  IDM_TIP_ALL_ENCODINGS   "Available encodings"
+  IDM_TIP_SEL_ENCODINGS   "Selected encodings,\1most preferred on top"
+  IDM_TIP_COMPRESS_LEVEL  "Compress level for:\1Tight, Zlib, ZlibHex"
+  IDM_TIP_QUALITY_LEVEL   "Quality level for:\1Tight, ZYWRLE"
+  IDM_TIP_IFADDR          "Which address " APP_NAME " binds on"
+  IDM_TIP_PORT            "Which port " APP_NAME " binds on"
+  IDM_SW_INVALID          "Invalid switch"
+  IDM_SW_NO_VALUE         "Switch must have value"
+  IDM_SW_NO_HOST          "Switch without specified host"
+  IDM_SW_INVALID_VALUE    "Invalid value"
+  IDM_SW_INVALID_DEPTH    "Invalid color depth"
+  IDM_SW_INVALID_ENC      "Unknown encoding"
+  IDM_SW_UNKNOWN          "Unknown switch"
+  IDM_ALREADY_BINDED      APP_NAME " is already listening on a specified "
+                          "address and port."
+  IDM_CHAT_CLOSED         "Server has left chat."
+  IDM_OVERWRITE           "File already exists, Overwrite?"
+  IDM_LMKDIR_FAIL         "Can not create a local directory."
+  IDM_RMKDIR_FAIL         "Can not create a remote directory."
+  IDM_RFILE_DELETE_FAIL   "Failed to delete remote file/directory."
+  IDM_QUERY_RDELETE       "Delete selected remote files/directories?"
+  IDM_QUERY_LRMOVE        "Move selected files/directories to the server?"
+  IDM_RENAME_FAIL         "Failed to rename remote file to the new name."
+  IDM_RECV_READ_FAIL      "Can not read a remote file."
+  IDM_RECV_WRITE_FAIL     "Error creating or writing a local file."
+  IDM_SEND_WRITE_FAIL     "Error creating or writing a remote file."
+  IDM_SEND_READ_FAIL      "Can not read a local file."
+  IDM_RDIRFILEREPLACE     "Can not replace directory with file or file with "
+                          "directory."
+  IDM_OVERWRITERDIR       "Remote directory exists. All files in this directory"
+                          " will be OVERWRITTEN!"
+  IDM_QUERY_LDELETE       "Delete selected local files/directories?"
+  IDM_LFILE_DELETE_FAIL   "Failed to delete local file."
+  IDM_QUERY_RLMOVE        "Move selected files/directories from the server?"
+  IDM_LRENAME_FAIL        "Failed to rename local file to the new name."
+  IDM_PERMISSION_DENIED   "File Transfer Permission denied."
+}
+
+STRINGTABLE
+{
+  IDS_NEW_CONNECTION     "N~ew connection..."
+  IDS_VIEW_ONLY          "~View only"
+  IDS_SEND_CAD           "Send Ctrl-Alt-Del"
+  IDS_SEND_CTRL_ESC      "Send Ct~rl-Esc"
+  IDS_SEND_ALT_ESC       "Send A~lt-Esc"
+  IDS_SEND_ALT_TAB       "Send ~Alt-Tab"
+  IDS_CHAT               "C~hat..."
+  IDS_FILE_TRANSFER      "~File transfer..."
+  IDS_CONNECT            "Connect"
+  IDS_LISTEN             "Listen"
+  IDS_LISTENING          "listening"
+  IDS_WAIT_SERVER        "Waiting for server"
+  IDS_NAME               "Name"
+  IDS_SIZE               "Size"
+  IDS_DATE               "Date"
+  IDS_TIME               "Time"
+  IDS_ATTRIBUTES         "Attributes"
+  IDS_OK                 "~Ok"
+  IDS_CANCEL             "~Cancel"
+  IDS_SKIP               "~Skip"
+  IDS_ALL                "~All"
+  IDS_NONE               "~None"
+  IDS_YES                "~Yes"
+  IDS_NO                 "~No"
+  IDS_OP_RLCOPY          "Copy a file from server to local host"
+  IDS_OP_RLMOVE          "Move a file from server to local host"
+  IDS_OP_RDELETE         "Delete remote file"
+  IDS_OP_LRCOPY          "Copy a file from local host to server"
+  IDS_OP_LRMOVE          "Move a file from local host to server"
+  IDS_OP_LDELETE         "Delete local file"
+}
+
+DLGTEMPLATE IDDLG_PROGRESS
+{
+  DIALOG APP_NAME " - %0", IDDLG_PROGRESS, 0, 0, 127, 25, NOT WS_SAVEBITS,
+          FCF_TITLEBAR | FCF_TASKLIST
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "Attempt %2 / %1", IDPBAR_PROGRESS, 3, 16, 120, 7, WC_PROGRESSBAR,
+            WS_VISIBLE
+    CONTROL "C~ancel", MBID_CANCEL, 3, 3, 40, 10, WC_BUTTON,
+            WS_VISIBLE | WS_TABSTOP
+  }
+}
+
+DLGTEMPLATE IDDLG_PASSWORD
+{
+  DIALOG APP_NAME, IDDLG_PASSWORD, 0, 0, 127, 27, NOT WS_SAVEBITS,
+          FCF_TITLEBAR | FCF_NOBYTEALIGN
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "Password:", -1, 3, 17, 54, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+    CONTROL "", IDEF_PASSWORD, 58, 17, 61, 7, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | ES_UNREADABLE | WS_VISIBLE |
+            WS_TABSTOP
+      CTLDATA 8, 64, 0, 0
+    CONTROL "Ok", MBID_OK, 3, 3, 40, 10, WC_BUTTON,
+            BS_DEFAULT | WS_VISIBLE | WS_TABSTOP
+    CONTROL "C~ancel", MBID_CANCEL, 46, 3, 40, 10, WC_BUTTON,
+            WS_VISIBLE | WS_TABSTOP
+  }
+}
+
+DLGTEMPLATE IDDDLG_CREDENTIAL
+{
+  DIALOG APP_NAME, IDDDLG_CREDENTIAL, 0, 0, 127, 39, NOT WS_SAVEBITS,
+          FCF_TITLEBAR
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "User name:", -1, 3, 28, 57, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+    CONTROL "", IDEF_USERNAME, 58, 28, 61, 7, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE |
+            WS_TABSTOP
+      CTLDATA 8, 255, 0, 0
+    CONTROL "Password:", -1, 3, 17, 57, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+    CONTROL "", IDEF_PASSWORD, 58, 17, 61, 7, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | ES_UNREADABLE | WS_VISIBLE |
+            WS_TABSTOP
+      CTLDATA 8, 255, 0, 0
+    CONTROL "Ok", MBID_OK, 3, 3, 40, 10, WC_BUTTON,
+            BS_DEFAULT | WS_VISIBLE | WS_TABSTOP
+    CONTROL "C~ancel", MBID_CANCEL, 46, 3, 40, 10, WC_BUTTON,
+            WS_VISIBLE | WS_TABSTOP
+  }
+}
+
+DLGTEMPLATE IDDLG_OPTIONS
+{
+  DIALOG "Options for %0", IDDLG_OPTIONS, 40, -105, 217, 159,
+          NOT WS_SAVEBITS,
+          FCF_TITLEBAR | FCF_SYSMENU | FCF_CLOSEBUTTON | FCF_DLGBORDER |
+          FCF_NOBYTEALIGN
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "Session", -1, 3, 105, 210, 52, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | DT_MNEMONIC | WS_VISIBLE
+
+    CONTROL "C~onnection attempts:", -1, 8, 141, 69, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_VCENTER | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_ATTEMPTS, 78, 141, 26, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTCENTER | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 2, 0, 1, 0, 10, 0, 0, 0, 0, 0
+    CONTROL "Color depth (~BPP):", -1, 8, 131, 69, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_VCENTER | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_BPP, 78, 131, 26, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_READONLY | SPBS_JUSTCENTER | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "~Remember password", IDCB_REMEMBER_PSWD, 120, 141, 80, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "Vie~w only", IDCB_VIEW_ONLY, 120, 131, 80, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "~Shared session", IDCB_SHARE_DESKTOP, 120, 121, 80, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+
+    CONTROL "Ch~aracter encoding:", -1, 8, 111, 69, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_VCENTER | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDEF_CHARSET, 77, 111, 61, 7, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE |
+            WS_TABSTOP
+      CTLDATA 8, 32, 0, 0
+
+    CONTROL "Encodings", -1, 3, 26, 210, 77, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDLB_ALL_ENCODINGS, 8, 51, 57, 43, WC_LISTBOX,
+            LS_NOADJUSTPOS | LS_MULTIPLESEL | LS_EXTENDEDSEL | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "~Add", IDPB_ENC_ADD, 68, 84, 35, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+    CONTROL "~Delete", IDPB_ENC_DELETE, 68, 72, 35, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+    CONTROL "", IDLB_SEL_ENCODINGS, 107, 51, 57, 43, WC_LISTBOX,
+            LS_NOADJUSTPOS | LS_MULTIPLESEL | LS_EXTENDEDSEL | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "U~p", IDPB_ENC_UP, 170, 84, 35, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+    CONTROL "Do~wn", IDPB_ENC_DOWN, 170, 72, 35, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+
+    CONTROL "Compr~ess:", -1, 8, 29, 40, 8, WC_STATIC,
+            SS_TEXT | DT_RIGHT | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "Slider", IDSLID_COMPRESS, 50, 29, 51, 20, WC_SLIDER, 
+            SLS_HORIZONTAL | SLS_BOTTOM | SLS_HOMELEFT | SLS_PRIMARYSCALE1 |
+            SLS_SNAPTOINCREMENT | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+      CTLDATA 12, 0, 10, 0, 10, 0
+    CONTROL "~Quality:", -1, 102, 29, 40, 8, WC_STATIC,
+            SS_TEXT | DT_RIGHT | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "Slider", IDSLID_QUALITY, 144, 29, 52, 20, WC_SLIDER, 
+            SLS_HORIZONTAL | SLS_BOTTOM | SLS_HOMELEFT | SLS_PRIMARYSCALE1 |
+            SLS_SNAPTOINCREMENT | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+      CTLDATA 12, 0, 10, 0, 10, 0
+
+    CONTROL "Use as default options for new ~hosts", IDCB_USE_AS_DEFAULT,
+            3, 16, 210, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+
+    CONTROL "O~k", MBID_OK, 44, 3, 35, 10, WC_BUTTON,
+            BS_DEFAULT | WS_GROUP | WS_VISIBLE | WS_TABSTOP
+    CONTROL "Ca~ncel", MBID_CANCEL, 81, 3, 35, 10, WC_BUTTON, WS_VISIBLE
+    CONTROL "~Undo", IDPB_UNDO, 118, 3, 35, 10, WC_BUTTON, WS_VISIBLE
+  }
+}
+
+DLGTEMPLATE IDDLG_LAUNCHPAD
+{
+  DIALOG "Connection", IDDLG_LAUNCHPAD, -86, -37, 173, 78,
+          NOT WS_SAVEBITS | WS_CLIPCHILDREN | FS_DLGBORDER | FS_MOUSEALIGN,
+          FCF_TITLEBAR | FCF_SYSMENU | FCF_CLOSEBUTTON | FCF_TASKLIST | FCF_NOBYTEALIGN
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDD_NOTEBOOK, 1, 1, 171, 75,
+            WC_NOTEBOOK, BKS_BACKPAGESTR | BKS_MAJORTABTOP | BKS_TABBEDDIALOG |
+            WS_GROUP | WS_TABSTOP | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE "8.Helv"
+  }
+}
+
+DLGTEMPLATE IDDLG_PAGE_CONNECT
+{
+  DIALOG "Connect", IDDLG_PAGE_CONNECT, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "~Host:", IDST_HOST, 8, 28, 24, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_VCENTER | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "",  IDCB_HOST, 32, -41, 120, 77, WC_COMBOBOX,
+            CBS_DROPDOWN | WS_GROUP | WS_TABSTOP | WS_VISIBLE
+    CONTROL "Conn~ect", MBID_OK, 3, 3, 40, 10, WC_BUTTON,
+            BS_DEFAULT | BS_NOTEBOOKBUTTON | WS_VISIBLE | WS_TABSTOP
+    CONTROL "~Options...", IDPB_OPTIONS, 46, 3, 40, 10, WC_BUTTON,
+            WS_VISIBLE | WS_TABSTOP
+    CONTROL "Forget", IDPB_FORGET, 89, 3, 40, 10, WC_BUTTON,
+            WS_VISIBLE | WS_TABSTOP
+  }
+}
+
+DLGTEMPLATE IDDLG_PAGE_LISTEN
+{
+  DIALOG "Listen", IDDLG_PAGE_LISTEN, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "~Interface:", IDST_HOST, 8, 35, 34, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_VCENTER | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "",  IDCB_IFADDR, 42, 6, 110, 37, WC_COMBOBOX,
+            CBS_DROPDOWNLIST | WS_GROUP | WS_TABSTOP | WS_VISIBLE
+    CONTROL "~Port:", IDST_HOST, 8, 25, 34, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_VCENTER | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_PORT, 42, 25, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 5, 0, 1, 0, 65535, 0, 0, 0, 0, 0
+    CONTROL "~Start", MBID_OK, 3, 3, 40, 10, WC_BUTTON,
+            BS_DEFAULT | BS_NOTEBOOKBUTTON | WS_VISIBLE | WS_TABSTOP
+    CONTROL "~Options...", IDPB_OPTIONS, 46, 3, 40, 10, WC_BUTTON,
+            WS_VISIBLE | WS_TABSTOP
+  }
+}
+
+
+/* ********************************************************* */
+/*                                                           */
+/*           Files transfer (file manager) dialog.           */
+/*                                                           */
+/* ********************************************************* */
+
+ACCELTABLE IDDLG_FILEXFER
+{
+  VK_F4, IDMI_REFRESH,    VIRTUALKEY
+  VK_F5, IDMI_COPY,       VIRTUALKEY
+  VK_F6, IDMI_MOVE,       VIRTUALKEY
+  VK_F7, IDMI_MKDIR,      VIRTUALKEY
+  VK_F8, IDMI_DELETE,     VIRTUALKEY
+  VK_F1, IDMI_LDRIVE,     VIRTUALKEY, ALT
+  VK_F2, IDMI_RDRIVE,     VIRTUALKEY, ALT
+  VK_F6, IDMI_RENAME,     VIRTUALKEY, ALT
+  "w",   IDMI_OPENFOLDER, CHAR, CONTROL
+}
+
+MENU IDDLG_FILEXFER
+{
+  PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  MENUITEM "~Copy\tF5",           IDMI_COPY
+  MENUITEM "~Move\tF6",           IDMI_MOVE
+  MENUITEM "~Delete\tF8",         IDMI_DELETE
+  MENUITEM "M~ake directory\tF7", IDMI_MKDIR
+  MENUITEM "~Rename\tAlt+F6",     IDMI_RENAME
+  MENUITEM "",                    -1, MIS_SEPARATOR
+  MENUITEM "Refresh\tF4",         IDMI_REFRESH
+  MENUITEM "Open folder\tCtrl+W", IDMI_OPENFOLDER
+}
+
+DLGTEMPLATE IDDLG_FILEXFER
+{
+  DIALOG APP_NAME " - File Transfer", IDDLG_FILEXFER, -171, -95, 343, 190,
+          FS_MOUSEALIGN,
+          FCF_DLGBORDER | FCF_TITLEBAR | FCF_SYSMENU |
+          FCF_CLOSEBUTTON | FCF_TASKLIST | FCF_NOBYTEALIGN
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDCN_LLIST, 4, 6, 164, 158, WC_CONTAINER,
+            CCS_EXTENDSEL | CCS_MINIRECORDCORE | CFA_FITITLEREADONLY |
+            WS_TABSTOP | WS_VISIBLE | WS_GROUP
+    CONTROL "",  IDCB_LDRIVES, 4, 122, 90, 60, WC_COMBOBOX,
+            CBS_DROPDOWNLIST | WS_GROUP | WS_TABSTOP | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "8.Helvetica Bold"
+    CONTROL "..", IDPB_LUPDIR, 96, 174, 25, 9, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+      PRESPARAMS PP_FONTNAMESIZE, "8.Helvetica Bold"
+    CONTROL "\\", IDPB_LROOT, 123, 174, 25, 9, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+      PRESPARAMS PP_FONTNAMESIZE, "8.Helvetica Bold"
+    CONTROL "", IDEF_LPATH, 4, 165, 164, 7, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_READONLY | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, 2048, 0, 0
+    CONTROL "Local", -1, 1, 2, 170, 188, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | DT_MNEMONIC | WS_VISIBLE
+
+    CONTROL "", IDCN_RLIST, 175, 6, 164, 158, WC_CONTAINER,
+            CCS_EXTENDSEL | CCS_MINIRECORDCORE | CFA_FITITLEREADONLY |
+            WS_TABSTOP | WS_VISIBLE | WS_GROUP
+    CONTROL "",  IDCB_RDRIVES, 175, 122, 90, 60, WC_COMBOBOX,
+            CBS_DROPDOWNLIST | WS_GROUP | WS_TABSTOP | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "8.Helvetica Bold"
+    CONTROL "..", IDPB_RUPDIR, 267, 174, 25, 9, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+      PRESPARAMS PP_FONTNAMESIZE, "8.Helvetica Bold"
+    CONTROL "\\", IDPB_RROOT, 294, 174, 25, 9, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+      PRESPARAMS PP_FONTNAMESIZE, "8.Helvetica Bold"
+    CONTROL "", IDEF_RPATH, 175, 165, 164, 7, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_READONLY | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, 2048, 0, 0
+    CONTROL "Remote", -1, 172, 2, 170, 188, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | DT_MNEMONIC | WS_VISIBLE
+  }
+}
+
+DLGTEMPLATE IDDLG_FXPROGRESS
+{
+  DIALOG "File transfer", IDDLG_FXPROGRESS, 0, 0, 240, 51,
+          FS_NOBYTEALIGN,
+          FCF_DLGBORDER | FCF_NOBYTEALIGN
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDST_OPERATION, 1, 43, 238, 7, WC_STATIC,
+            SS_TEXT | DT_CENTER | WS_VISIBLE
+    CONTROL "", IDST_FILE, 1, 35, 238, 7, WC_STATIC,
+            SS_TEXT | DT_CENTER | WS_VISIBLE
+
+    CONTROL "%", IDPBAR_OPERATION, 4, 25, 232, 7, WC_PROGRESSBAR, WS_VISIBLE
+      CTLDATA 6, 0, PRBARA_LEFTDBL,
+
+    CONTROL "Total size:", -1, 8, 15, 40, 7, WC_STATIC, SS_TEXT | WS_VISIBLE
+    CONTROL "", IDST_TOTAL_SIZE, 48, 15, 50, 7, WC_STATIC, SS_TEXT | WS_VISIBLE
+
+    CONTROL "~Cancel", MBID_CANCEL, 4, 1, 45, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP
+  }
+}

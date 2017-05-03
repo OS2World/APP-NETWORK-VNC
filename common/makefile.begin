@@ -1,0 +1,48 @@
+PATH_BIN = ..\bin
+FILE_BIN = $(PATH_BIN)\$(NAME).$(EXT)
+FILE_LIB = $(NAME).a
+FILE_DEF = $(NAME).def
+FILE_RC  = $(NAME).rc
+FILE_RES = $(NAME).res
+
+CC = @gcc
+RC = @rc
+AR = @ar
+
+LXLITE = @lxlite /CS $(FILE_BIN) >nul
+
+CFLAGS += -Wall -s -Wno-format -I. \
+          -I./ -I../libvncserver -I../common -I../os2xkey -I../vncpm \
+          -I../libgiconv -I../vnckbd \
+          -idirafter /@unixroot/usr/include/os2tk45 -DUSE_OS2_TOOLKIT_HEADERS
+
+ifeq ($(DEBUGCODE),YES)
+SRCS += ..\common\debug.c
+CFLAGS += -DDEBUG_FILE=\"$(NAME).dbg\"
+DESCRIPTION += (debug)
+endif
+
+OBJS = $(SRCS:.c=.o)
+
+ifeq ($(EXT),dll)
+LDFLAGS += -Zdll -Zmtd
+endif
+
+LDFLAGS += -Zomf $(OBJS) $(LIBS) -o $(FILE_BIN)
+# -Zlinker option -Zlinker eliminate
+
+RCFLAGS = -n $(FILE_RES) $(FILE_BIN) >nul
+
+
+ifeq ($(EXT),dll)
+
+all: $(FILE_LIB)
+
+$(FILE_LIB): $(FILE_BIN)
+	@emximp -o $@ $(FILE_BIN)
+
+else
+
+all: $(FILE_BIN)
+
+endif

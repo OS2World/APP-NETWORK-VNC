@@ -1,0 +1,344 @@
+#ifndef OS2_INCLUDED
+#include <os2.h>
+#endif
+#include "resource.h"
+
+ICON     ID_ICON                 resources\server.ico
+ICON     ID_ICON_ONLINE          resources\server-online.ico
+ICON     IDICON_NULL             resources\null.ico
+ICON     IDICON_ACL_DISABLE      resources\ACLDisable.ico
+ICON     IDICON_ACL_ENABLE       resources\ACLEnable.ico
+
+STRINGTABLE
+{
+  IDS_UNDO                       "~Undo"
+  IDS_DEFAULT                    "~Default"
+  IDS_GENERAL                    "General"
+  IDS_ACCESS                     "Access"
+  IDS_OPTIONS                    "Options"
+  IDS_KEYBOARD                   "Keyboard"
+  IDS_LOGGING                    "Logging"
+  IDS_PROGRAMS                   "External programs"
+  IDS_SOURCE                     "Source"
+  IDS_COMMENT                    "Comment"
+  IDS_ALLOW                      "allow"
+  IDS_DENY                       "deny"
+  IDS_CLIENTS                    "clients"
+  IDS_HOST                       "Host"
+  IDS_TIME                       "Time"
+  IDS_VERSION                    "Protocol"
+  IDS_STATE                      "State"
+}
+
+MESSAGETABLE
+{
+  IDMSG_USER_CHAT_OPEN    "User has open chat"
+  IDMSG_USER_CHAT_LEFT    "User has left chat"
+  IDMSG_USER_DISCONNECT   "User disconnected"
+  IDMSG_CHAT_NOT_DETECTED "TextChat feature was not detected for this viewer.\1"
+                          "Do you want to try it anyway?"
+}
+
+MENU IDMNU_MAIN
+{
+  MENUITEM "~Properties",                  CMD_CONFIG_OPEN
+  MENUITEM "~Attach listening viewer...",  CMD_ATTACH_VIEWER_OPEN
+  MENUITEM "~List all clients...",         CMD_CLIENTS_OPEN
+  MENUITEM "~Shutdown VNC Server",         CMD_QUIT
+}
+
+MENU IDMNU_ACL
+{
+  SUBMENU "~Rule",               -1
+  {
+    MENUITEM "~Enable",          IDM_ENABLE
+    MENUITEM "~Disable",         IDM_DISABLE
+  }
+  MENUITEM "",                   -1, MIS_SEPARATOR
+  MENUITEM "~Allow",             IDM_ALLOW
+  MENUITEM "~Deny",              IDM_DENY
+  MENUITEM "",                   -1, MIS_SEPARATOR
+  MENUITEM "Edit ~comment...",   IDM_COMMENT
+}
+
+MENU IDMNU_CLIENTS
+{
+  MENUITEM "~Disconnect selected", IDM_DISCONNECT
+  MENUITEM "~Chat",                IDM_CHAT
+}
+
+RESOURCE 300 IDDATA_PROGRAMS_PAGE_HELP resources\programs.txt
+
+DLGTEMPLATE IDDLG_CONFIG
+{
+  DIALOG "Properties - " APP_NAME, IDDLG_CONFIG, -135, -70, 270, 180,
+          NOT WS_SAVEBITS | WS_CLIPCHILDREN | FS_DLGBORDER | FS_MOUSEALIGN |
+          FS_NOMOVEWITHOWNER,
+          FCF_TITLEBAR | FCF_SYSMENU | FCF_CLOSEBUTTON | FCF_TASKLIST |
+          FCF_NOBYTEALIGN
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDNB_CONFIG, 0, 0, 270, 180,
+            WC_NOTEBOOK, BKS_BACKPAGESTR | BKS_MAJORTABTOP | WS_GROUP |
+            WS_TABSTOP | WS_VISIBLE | BKS_BUTTONAREA | BKS_TABBEDDIALOG |
+            BKS_ROUNDEDTABS 
+      PRESPARAMS PP_FONTNAMESIZE "8.Helv"
+  }
+}
+
+DLGTEMPLATE IDDLG_PAGE_GENERAL
+{
+  DIALOG "General", IDDLG_PAGE_GENERAL, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "VNC Authentication", -1, 4, 47, 165, 36, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | WS_VISIBLE
+    CONTROL "~Primary password", IDCB_PRIM_PSWD, 8, 65, 90, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "", IDEF_PRIM_PSWD, 98, 65, 65, 8, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | ES_UNREADABLE | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, 8, 0, 0
+    CONTROL "~View-only password", IDCB_VO_PSWD, 8, 53, 90, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "", IDEF_VO_PSWD, 98, 53, 65, 8, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | ES_UNREADABLE | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, 8, 0, 0
+
+    CONTROL "Binding", -1, 4, 2, 165, 42, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | WS_VISIBLE
+    CONTROL "~Listen address", -1, 8, 26, 90, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "",  IDLB_INTERFACES, 98, -10, 65, 44, WC_COMBOBOX,
+            CBS_DROPDOWNLIST | WS_GROUP | WS_TABSTOP | WS_VISIBLE
+    CONTROL "~Main server port", -1, 8, 16, 90, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_PORT, 98, 16, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 5, 0, 1, 0, 65535, 0, 0, 0, 0, 0
+    CONTROL "~Web access port", -1, 8, 6, 90, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_HTTP_PORT, 98, 6, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 5, 0, 1, 0, 65535, 0, 0, 0, 0, 0
+  }
+}
+
+DLGTEMPLATE IDDLG_PAGE_ACCESS
+{
+  DIALOG "Access", IDDLG_PAGE_ACCESS, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDCN_ACL, 8, 70, 185, 50, WC_CONTAINER,
+            CCS_SINGLESEL | CCS_MINIRECORDCORE | WS_TABSTOP | WS_VISIBLE |
+            WS_GROUP
+    CONTROL "Access list", -1, 4, 66, 246, 62, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | WS_VISIBLE
+    CONTROL "~New", IDPB_ACL_NEW, 195, 110, 50, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_GROUP | WS_VISIBLE | WS_TABSTOP
+    CONTROL "~Remove", IDPB_ACL_REMOVE, 195, 98, 50, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_DISABLED
+    CONTROL "U~p", IDPB_ACL_UP, 195, 86, 50, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_DISABLED
+    CONTROL "D~own", IDPB_ACL_DOWN, 195, 74, 50, 10, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE | WS_DISABLED
+
+    CONTROL "Session sharing", -1, 4, 2, 246, 62, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | WS_VISIBLE
+    CONTROL "Disconnect existing clients on new non-shared connections.",
+            IDRB_SHARED_ASIS, 8,  46, 240, 8, WC_BUTTON,
+            BS_AUTORADIOBUTTON | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+    CONTROL "Block new non-shared connections if someone is already connected.",
+            IDRB_SHARED_ASIS_DONTDISCON, 8, 36, 240, 8, WC_BUTTON,
+            BS_AUTORADIOBUTTON | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+    CONTROL "Always treat connections as shared, add new clients and keep old connections.",
+            IDRB_ALWAYSSHARED, 8, 26, 240, 8, WC_BUTTON,
+            BS_AUTORADIOBUTTON | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+    CONTROL "Never treat connections as shared, disconnect existing clients on new connection.",
+            IDRB_NEVERSHARED, 8, 16, 240, 8, WC_BUTTON,
+            BS_AUTORADIOBUTTON | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+    CONTROL "Never treat connections as shared, disable new clients if there is one already.",
+            IDRB_NEVERSHARED_DONTDISCON, 8, 6, 240, 8, WC_BUTTON,
+            BS_AUTORADIOBUTTON | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+  }
+}
+
+DLGTEMPLATE IDDLG_PAGE_OPTIONS
+{
+  DIALOG "Options", IDDLG_PAGE_OPTIONS, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "~Enable system tray/floating icon", IDCB_GUIVISIBLE, 8, 75, 200, 8,
+            WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+
+    CONTROL "~Time to defer updates:", -1, 8, 60, 130, 8,
+            WC_STATIC, SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_DEFUPDTIME, 138, 60, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 5, 0, 0, 0, 2000, 0, 0, 0, 0, 0
+    CONTROL "MSec.", -1, 175, 60, 20, 8, WC_STATIC, SS_TEXT | DT_LEFT | DT_BOTTOM | WS_VISIBLE
+
+    CONTROL "T~ime to defer pointer updates:", -1, 8, 50, 130, 8,
+            WC_STATIC, SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_DEFPTRUPDTIME, 138, 50, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 5, 0, 0, 0, 2000, 0, 0, 0, 0, 0
+    CONTROL "MSec.", -1, 175, 50, 20, 8, WC_STATIC, SS_TEXT | DT_LEFT | DT_BOTTOM | WS_VISIBLE
+
+    CONTROL "~Progressive updating for slow links:", -1, 8, 40, 130, 8,
+            WC_STATIC, SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_SLICEHEIGHT, 138, 40, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 5, 0, 0, 0, 1024, 0, 0, 0, 0, 0
+    CONTROL "lines.", -1, 175, 40, 20, 8, WC_STATIC, SS_TEXT | DT_LEFT | DT_BOTTOM | WS_VISIBLE
+
+    CONTROL "~File transfer", IDCB_FILETRANSFER, 8, 26, 200, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "U~ltraVNC client support", IDCB_ULTRAVNC, 8, 16, 200, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "E~nable HTTP proxy support", IDCB_HTTPPROXY, 8, 6, 200, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+  }
+}
+
+DLGTEMPLATE IDDLG_PAGE_KBD
+{
+  DIALOG "Keyboard", IDDLG_PAGE_KBD, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "Use ~VNCKBD$ driver", IDCB_DRIVER_VNCKBD, 8, 16, 200, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "Use ~system keyboard driver", IDCB_DRIVER_KBD, 8, 6, 200, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+  }
+}
+
+DLGTEMPLATE IDDLG_PAGE_LOG
+{
+  DIALOG "Logging", IDDLG_PAGE_LOG, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "Log file", -1, 4, 45, 180, 38, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | WS_VISIBLE
+    CONTROL "File n~ame", -1, 8, 64, 50, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDEF_LOG_FILE, 58, 64, 120, 8, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, CCHMAXPATH, 0, 0
+    CONTROL "Fi~nd", IDPN_LOG_FIND, 58, 50, 35, 10, WC_BUTTON,
+            BS_DEFAULT | WS_VISIBLE | WS_TABSTOP
+    CONTROL "~Open folder", IDPB_LOG_FOLDER, 98, 50, 47, 10, WC_BUTTON,
+            BS_DEFAULT | WS_VISIBLE | WS_TABSTOP
+
+    CONTROL "Options", -1, 4, 2, 180, 40, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | WS_VISIBLE
+    CONTROL "D~etail level", -1, 8, 26, 60, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_LOG_LEVEL, 68, 26, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0
+    CONTROL "File ~size limit", -1, 8, 16, 60, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_LOG_SIZE, 68, 16, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 4, 0, 0, 0, 1024, 0, 0, 0, 0, 0
+    CONTROL "Mb (0 - unlimited)", -1, 106, 16, 72, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | WS_VISIBLE
+    CONTROL "~Files", -1, 8, 6, 60, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDSB_LOG_FILES, 68, 6, 36, 8, WC_SPINBUTTON,
+            SPBS_MASTER | SPBS_NUMERICONLY | SPBS_JUSTRIGHT | WS_VISIBLE |
+            WS_GROUP | WS_TABSTOP
+      CTLDATA 24, 0, 2, 0, 0, 0, 10, 0, 0, 0, 0, 0
+    CONTROL "(0 - disable logging)", -1, 106, 6, 72, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | WS_VISIBLE
+  }
+}
+
+DLGTEMPLATE IDDLG_PAGE_PROGRAMS
+{
+  DIALOG "Programs", IDDLG_PAGE_PROGRAMS, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDMLE_PROGRAMS, 8, 70, 170, 55, WC_MLE, 
+            MLS_BORDER | MLS_DISABLEUNDO | MLS_LIMITVSCROLL | MLS_READONLY |
+            MLS_VSCROLL | MLS_WORDWRAP | WS_VISIBLE
+      PRESPARAMS PP_BACKGROUNDCOLORINDEX, SYSCLR_DIALOGBACKGROUND
+
+    CONTROL "Vi~ewer logged in", IDCB_ONLOGON, 8, 56, 170, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "", IDEF_ONLOGON, 18, 46, 160, 8, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, 260, 0, 0
+
+    CONTROL "Viewer ~gone", IDCB_ONGONE, 8, 36, 170, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "", IDEF_ONGONE, 18, 26, 160, 8, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, 260, 0, 0
+
+    CONTROL "Ctrl-~Alt-Del handler", IDCB_ONCAD, 8, 16, 170, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "", IDEF_ONCAD, 18, 6, 160, 8, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, 260, 0, 0
+  }
+}
+
+
+DLGTEMPLATE IDDLG_ATTACH_VIEWER
+{
+  DIALOG APP_NAME " - Attach listening viewer", IDDLG_ATTACH_VIEWER,
+          -86, -37, 175, 70,
+          FS_MOUSEALIGN | WS_VISIBLE | WS_SAVEBITS,
+          FCF_TITLEBAR | FCF_SYSMENU | FCF_CLOSEBUTTON | FCF_TASKLIST
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "Viewer host", -1, 4, 17, 167, 52, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | WS_VISIBLE
+    CONTROL "Here you can attach VNC Viewer running in the Listening mode."
+            "To specify a TCP port, append it after colon. The default port "
+            "is 5500",
+            -1, 8, 37, 155, 24, WC_STATIC,
+            SS_TEXT | DT_WORDBREAK | WS_VISIBLE
+      PRESPARAMS PP_FOREGROUNDCOLOR, CLR_DARKGRAY
+    CONTROL "~Host[:port]:", -1, 8, 26, 34, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_VCENTER | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "",  IDCB_ATTACH_HOST, 52, -3, 110, 37, WC_COMBOBOX,
+            CBS_DROPDOWN | WS_GROUP | WS_TABSTOP | WS_VISIBLE
+    CONTROL "~Attach", MBID_OK, 3, 3, 40, 10, WC_BUTTON,
+            BS_DEFAULT | BS_PUSHBUTTON | WS_VISIBLE | WS_TABSTOP | WS_DISABLED
+  }
+}
+
+DLGTEMPLATE IDDLG_CLIENTS
+{
+  DIALOG APP_NAME " - List of clients", IDDLG_CLIENTS, 0, 0, 160, 57,
+          FS_SIZEBORDER | FS_MOUSEALIGN | WS_VISIBLE | WS_SAVEBITS,
+          FCF_TITLEBAR | FCF_SYSMENU | FCF_CLOSEBUTTON | FCF_TASKLIST |
+          FCF_NOBYTEALIGN
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDCN_CLIENTS, 1, 1, 100, 40, WC_CONTAINER,
+            CCS_EXTENDSEL | CCS_MINIRECORDCORE | WS_TABSTOP | WS_VISIBLE |
+            WS_GROUP
+  }
+}

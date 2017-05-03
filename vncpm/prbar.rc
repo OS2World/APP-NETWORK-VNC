@@ -1,0 +1,4 @@
+#include "prbar.h"
+
+BITMAP   IDBMP_PRBAR1  resources\bar.bmp
+BITMAP   IDBMP_PRBAR2  resources\bar_red.bmp

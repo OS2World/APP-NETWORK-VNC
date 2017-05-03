@@ -1,0 +1,17 @@
+utils.o: ..\common\utils.c
+	$(CC) $(CFLAGS) $(UTILS_CFLAGS) -c $<
+
+.c.obj: .AUTODEPEND
+	$(CC) $(CFLAGS) -c $<
+
+$(FILE_RES): $(FILE_RC)
+	$(RC) -i ..\vncpm -r -n $(FILE_RC) >nul
+
+msgCompilation:
+	@echo   Compilation: $(DESCRIPTION) ver. $(VERSION)
+
+msgBuilding:
+	@echo   Building: $(FILE_BIN)
+
+clean:
+	@rm -f $(OBJS) $(FILE_DEF) $(FILE_LIB) $(FILE_RES)

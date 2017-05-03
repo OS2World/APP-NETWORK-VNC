@@ -1,0 +1,82 @@
+                                 VNC Client
+                  Client to access remote desktop service.
+
+
+This package provides a VNC-client for OS/2 Presentation Manager, you can
+connect to a VNC-server somewhere in the network and display its content in a
+window. VNC stands for Virtual Network Computing. 
+This program based on LibVNCClient library licensed under the GPL.
+
+
+Installation.
+-------------
+
+1. Install 'libc066.dll', other 'libc*.dll', 'gcc1.dll', 'crypto10.dll',
+   'ssl10.dll', 'z.dll', 'pthr01.dll' and 'jpeg.dll' files into one of the
+   directories on your "LIBPATH" (e.g.
+   'x:\os2\dll'). You can download archives with these files from:
+
+       http://rpm.netlabs.org/release/00/zip/libc-0_6_6-26_oc00.zip
+       http://rpm.netlabs.org/release/00/zip/gcc-4_9_2_1-3_oc00.zip
+       http://rpm.netlabs.org/release/00/zip/openssl-1_0_0r-1_oc00.zip
+       http://rpm.netlabs.org/release/00/zip/zlib-1_2_5-5_oc00.zip
+       http://rpm.netlabs.org/release/00/zip/pthread-20150408-19_oc00.zip
+       http://rpm.netlabs.org/release/00/zip/libjpeg-8c-1_oc00.zip
+
+   If you use RPM/YUM, just run this command:
+
+       yum install libc libgcc1 openssl zlib pthread libjpeg
+
+2. UNZIP the archive into any directory you wish. This will create a
+   subdirectory with the same name as the program. For example:
+     unzip vncviewer.zip -d x:\Programs
+   will install VNC Viewer in x:\Programs\vncviewer.
+
+3. Run vncviewer.exe.
+
+
+Command line switches
+---------------------
+
+  vncviewer.exe [[-h|-l] [-ravcdeoq] ...]
+
+  -h host[:display]          - VNC server. Can be specified multiple times.
+  -l [ipaddr|*|any][:port]   - The addresses and port where VNC Viewer will
+                               listen for server connection. You may specify
+                               this switch multiple times.
+  -r <1|Y|YES|ON|0|N|NO|OFF> - Use (1/y/yes/on) stored password or prompt user
+                               (0/n/no/off) for the password.
+  -a NN                      - Connection attempts (1..10).
+  -v <1|Y|YES|ON|0|N|NO|OFF> - View-only mode.
+  -c [8|16|32|TrueColor]     - Color depth (TrueColor is 32 BPP).
+  -d host[:port]             - Destination host.
+  -s <1|Y|YES|ON|0|N|NO|OFF> - Request shared session.
+  -e "enc1 enc2 ..."         - Support encodings:
+                                 RAW COPYRECT TIGHT HEXTILE ZLIB ZLIBHEX
+                                 ZRLE ZYWRLE ULTRA CORRE RRE.
+                               First encoding is most prfered.
+  -o N                       - Compress level for encodings: TIGHT, ZLIB and
+                               ZLIBHEX (0..9).
+  -q N                       - Quality level for TIGHT and ZYWRLE (0..9).
+  -t "Window title"          - Window title.
+
+  -R                         - Reset fonts & colors in the dialog boxes.
+
+  For all the unspecified switches -ravcdeoq previously stored in GUI or the
+  default values will be used.
+
+Examples:
+
+  vncviewer.exe -h 192.168.1.10 -c 16 -o7 -q4
+  vncviewer.exe -h 192.168.1.10 -r No -t "Host A" -h myhostb -vON -t "Host B"
+  vncviewer.exe -lAny -c32 -eTight
+
+
+
+Donations are most welcome!
+https://www.arcanoae.com/shop/os2-ports-and-applications-by-andrey-vasilkin/
+PayPal: digi@os2.snc.ru
+
+Andrey Vasilkin, 2016
+E-mail: digi@os2.snc.ru
+Jabber: digi@frs.snc.ru

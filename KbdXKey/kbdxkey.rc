@@ -1,0 +1,160 @@
+#ifndef OS2_INCLUDED
+#include <os2.h>
+#endif
+#include "resource.h"
+
+ICON     IDDLG_KEYTBL           resources\kbdxkey.ico
+
+ACCELTABLE IDDLG_KEYTBL
+{
+  VK_F3, IDMI_EXIT,              VIRTUALKEY
+  VK_F5, IDMI_RECONEKEY,         VIRTUALKEY
+  VK_F6, IDMI_RECMANYKEYS,       VIRTUALKEY
+  "s",   IDMI_SAVE,              CHAR, CONTROL
+  "S",   IDMI_SAVE,              CHAR, CONTROL
+  "t",   IDMI_TESTKEY,           CHAR, CONTROL
+  "T",   IDMI_TESTKEY,           CHAR, CONTROL
+}
+
+MENU IDDLG_KEYTBL
+{
+  PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  SUBMENU "~File",                         -1
+  {
+    MENUITEM "~New",                       IDMI_NEW, MIS_TEXT
+    SUBMENU "~Open",                       -1
+    {
+      MENUITEM "~General table",           IDMI_LOADGENTBL, MIS_TEXT
+      MENUITEM "~Local table (%0)",        IDMI_LOADLOCALTBL, MIS_TEXT
+      MENUITEM "~File...",                 IDMI_LOADFILE, MIS_TEXT
+    }
+    MENUITEM "~Save\tCtrl+S",              IDMI_SAVE, MIS_TEXT, MIA_DISABLED
+    MENUITEM "Save ~as...",                IDMI_SAVEAS, MIS_TEXT
+// , MIA_DISABLED
+    MENUITEM "~Test...\tCtrl+T",           IDMI_TESTKEY, MIS_TEXT
+    MENUITEM "",                           -1, MIS_SEPARATOR
+    MENUITEM "~Exit\tF3",                  IDMI_EXIT, MIS_TEXT
+  }
+  SUBMENU "~Record",             -1
+  {
+    MENUITEM "Start - ~One key\tF5",       IDMI_RECONEKEY, MIS_TEXT
+    MENUITEM "Start - ~Many keys\tF6",     IDMI_RECMANYKEYS, MIS_TEXT
+    MENUITEM "",                 -1, MIS_SEPARATOR
+    MENUITEM "Open a list of names for ~unknown keys",  IDMI_NAMESFORUNKNOWN, MIS_TEXT
+    MENUITEM "Open a list of names for ~any key",       IDMI_NAMESFORANY, MIS_TEXT
+    MENUITEM "~Do not open the list of names",          IDMI_NONAMES, MIS_TEXT
+  }
+  MENUITEM "Stop",                         IDMI_RECSTOP, MIS_TEXT, MIA_DISABLED
+}
+
+MENU IDM_RECORD
+{
+  PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  MENUITEM "Delete",             IDMI_DELETE, MIS_TEXT
+  MENUITEM "Set primary",        IDMI_PRIMARY, MIS_TEXT, MIA_DISABLED
+}
+
+DLGTEMPLATE IDDLG_KEYTBL
+{
+  DIALOG APP_NAME, IDDLG_KEYTBL, 0, 0, 350, 190,
+          FS_SCREENALIGN | WS_CLIPCHILDREN,
+          FCF_SIZEBORDER | FCF_TITLEBAR | FCF_SYSMENU | FCF_CLOSEBUTTON |
+          FCF_MINMAX | FCF_TASKLIST | FCF_NOBYTEALIGN | FCF_MENU | FCF_ICON
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDCN_LIST, 0, 0, 350, 182, WC_CONTAINER,
+            CCS_EXTENDSEL | CCS_MINIRECORDCORE | WS_TABSTOP | WS_VISIBLE |
+            WS_GROUP
+  }
+}
+
+DLGTEMPLATE IDDLG_NAMESTBL
+{
+  DIALOG "Keysym defines", IDDLG_NAMESTBL, 0, 0, 320, 190,
+          FS_SCREENALIGN | WS_CLIPCHILDREN,
+          FCF_SIZEBORDER | FCF_TITLEBAR | FCF_SYSMENU | FCF_MAXBUTTON |
+          FCF_CLOSEBUTTON | FCF_NOBYTEALIGN
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "", IDCN_NAMES, 0, 8, 320, 182, WC_CONTAINER,
+            CCS_SINGLESEL | CCS_MINIRECORDCORE | CCS_SINGLESEL | CCS_READONLY |
+            WS_TABSTOP | WS_VISIBLE | WS_GROUP
+    CONTROL "", IDST_STATUSLINE, 0, 0, 320, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+      PRESPARAMS PP_FOREGROUNDCOLORINDEX, SYSCLR_WINDOWTEXT
+  }
+}
+
+DLGTEMPLATE IDDLG_TESTKEY
+{
+  DIALOG "Keyboard check", IDDLG_TESTKEY, 150, 150, 227, 82,
+          FS_SCREENALIGN,
+          FCF_TITLEBAR | FCF_SYSMENU | FCF_CLOSEBUTTON
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    ; Left column.
+
+    CONTROL "Client: input event.", -1, 1, 26, 110, 54, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "Flags:", -1, 3, 65, 25, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+    CONTROL "", IDST_FLAGS, 28, 51, 80, 21, WC_STATIC,
+            SS_TEXT | DT_WORDBREAK  | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+    CONTROL "Scan:", -1, 3, 44, 25, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+    CONTROL "", IDST_SCAN, 28, 44, 80, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+    CONTROL "Char.:", -1, 3, 37, 25, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+    CONTROL "", IDST_CHAR, 28, 37, 80, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+    CONTROL "Virt.key:", -1, 3, 30, 25, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+    CONTROL "", IDST_VK, 28, 30, 80, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+
+    CONTROL "Client: result (keysym)", -1, 1, 1, 110, 25, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDEF_KEYSYM, 3, 11, 68, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+      PRESPARAMS PP_FOREGROUNDCOLORINDEX, CLR_BLACK
+    CONTROL "", IDEF_KEYSYMCODE, 75, 11, 35, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+      PRESPARAMS PP_FOREGROUNDCOLORINDEX, CLR_BLACK
+    CONTROL "", IDST_METHOD, 3, 4, 105, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+
+    ; Right column.
+
+    CONTROL "Server: input (keysym)", -1, 115, 55, 110, 25, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDST_OUTKEYSYM, 117, 65, 105, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+      PRESPARAMS PP_FOREGROUNDCOLORINDEX, CLR_BLACK
+    CONTROL "Select...", IDPB_SELKEYSYM, 187, 57, 35, 8, WC_BUTTON,
+            BS_PUSHBUTTON | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+
+    CONTROL "Server: output event", -1, 115, 1, 110, 54, WC_STATIC,
+            SS_GROUPBOX | DT_LEFT | DT_TOP | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "Flags:", -1, 117, 39, 25, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+    CONTROL "", IDST_OUTFLAGS, 142, 25, 80, 21, WC_STATIC,
+            SS_TEXT | DT_WORDBREAK  | WS_VISIBLE
+      PRESPARAMS PP_FONTNAMESIZE, "7.Helv"
+    CONTROL "Scan:", -1, 117, 18, 25, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+    CONTROL "", IDST_OUTSCAN, 142, 18, 80, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+    CONTROL "Char.:", -1, 117, 11, 25, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+    CONTROL "", IDST_OUTCHAR, 142, 11, 80, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+    CONTROL "Virt.key:", -1, 117, 4, 25, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE | SS_AUTOSIZE
+    CONTROL "", IDST_OUTVK, 142, 4, 80, 7, WC_STATIC,
+            SS_TEXT | WS_VISIBLE
+  }
+}

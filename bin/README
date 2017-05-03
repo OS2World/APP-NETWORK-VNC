@@ -1,0 +1,169 @@
+                            VNC Client And Server
+
+Contents
+--------
+
+   - Installation.
+   - VNC Viewer - client to access remote desktop service.
+   - VNC Server - graphical desktop sharing.
+   - Keyboard Map Utility.
+   - Autor.
+
+
+
+Installation
+------------
+
+Install crypto10.dll, gcc1.dll, gcc446.dll, jpeg.dll, jpeg8.dll, libcx0.dll,
+png1616.dll, pthr01.dll, ssl10.dll, z.dll and z1.dll files into one of the
+directories on your "LIBPATH" (e.g. 'x:\os2\dll'). You can download archives
+with these files from:
+
+    http://rpm.netlabs.org/release/00/zip/libc-0_6_6-26_oc00.zip
+    http://rpm.netlabs.org/release/00/zip/gcc-4_9_2_1-3_oc00.zip
+    http://rpm.netlabs.org/release/00/zip/openssl-1_0_0r-1_oc00.zip
+    http://rpm.netlabs.org/release/00/zip/zlib-1_2_11-1_oc00.zip
+    http://rpm.netlabs.org/release/00/zip/pthread-20150408-19_oc00.zip
+    http://rpm.netlabs.org/release/00/zip/libjpeg-8c-1_oc00.zip
+
+If you use RPM/YUM, just run this command:
+
+    yum install libc libgcc1 openssl zlib pthread libjpeg libpng
+
+It is recommended to use Extended System Tray Widget (by Dmik) for
+eCenter/XCenter with VNC Server:
+
+  ftp://ftp.netlabs.org/pub/qt4/xsystray/xsystray-0_1_1.wpi
+
+or System Tray Widget ver. 0.3 (by ErOs2).
+
+
+VNC Viewer - client to access remote desktop service
+----------------------------------------------------
+
+This package provides a VNC-client for OS/2 Presentation Manager, you can
+connect to a VNC-server somewhere in the network and display its content in a
+window. VNC stands for Virtual Network Computing. 
+
+VNC Client supports UltraVNC advanced features such as file franfering and
+chat.
+
+Command line switches for VNC Viewer
+
+  vncviewer.exe [[-h|-l] [-ravcdeoq] ...]
+
+  -h host[:display]          - VNC server. Can be specified multiple times.
+  -l [ipaddr|*|any][:port]   - The addresses and port where VNC Viewer will
+                               listen for server connection. You may specify
+                               this switch multiple times.
+  -r <1|Y|YES|ON|0|N|NO|OFF> - Use (1/y/yes/on) stored password or prompt user
+                               (0/n/no/off) for the password.
+  -a NN                      - Connection attempts (1..10).
+  -v <1|Y|YES|ON|0|N|NO|OFF> - View-only mode.
+  -c [8|16|32|TrueColor]     - Color depth (TrueColor is 32 BPP).
+  -d host[:port]             - Destination host.
+  -s <1|Y|YES|ON|0|N|NO|OFF> - Request shared session.
+  -e "enc1 enc2 ..."         - Support encodings:
+                                 RAW COPYRECT TIGHT HEXTILE ZLIB ZLIBHEX
+                                 ZRLE ZYWRLE ULTRA CORRE RRE.
+                               First encoding is most prfered.
+  -o N                       - Compress level for encodings: TIGHT, ZLIB and
+                               ZLIBHEX (0..9).
+  -q N                       - Quality level for TIGHT and ZYWRLE (0..9).
+  -t "Window title"          - Window title.
+
+  -R                         - Reset fonts & colors in the dialog boxes.
+
+  For all the unspecified switches -ravcdeoq previously stored in GUI or the
+  default values will be used.
+
+Examples:
+
+  vncviewer.exe -h 192.168.1.10 -c 16 -o7 -q4
+  vncviewer.exe -h 192.168.1.10 -r No -t "Host A" -h myhostb -vON -t "Host B"
+  vncviewer.exe -lAny -c32 -eTight
+
+This program based on LibVNCClient library licensed under the GPL.
+
+
+VNC Server - graphical desktop sharing
+--------------------------------------
+
+VNC Server transmits a duplicate of the remote computer's display screen to the
+viewer. It also interprets commands coming from the viewer and carries them out
+on the remote computer.
+
+VNC Server supports UltraVNC advanced features such as file franfering and
+chat.
+
+Web Browser Access
+
+Users may access their desktops from any computer with any Java-enabled or
+HTML5-capable Web browser, without installing any software on the client
+computer. VNC displays a desktop within a browser window by running a Java
+applet or uses HTML5 capabilities.
+
+This program based on LibVNCServer library licensed under the GPL.
+
+Command line switches for VNC Server
+
+  -s <properties-open properties-close show hide shutdown>
+
+  -s                         - Send command to the running instanse.
+    properties-open          - Open properties notebook.
+    properties-close         - Close properties notebook.
+    show                     - Show system tray/floating icon.
+    hide                     - Hide system tray/floating icon.
+    shutdown                 - Shutdown server.
+
+
+Keyboard Map Utility
+--------------------
+
+Client sends keyboard events to the server. The key itself is specified using
+the "keysym" values defined by the X Window System, even if the client or
+server is not running the X Window System.
+
+VNC Server and VNC Client provided by this package use correspondence tables
+to translate system keyboard events to "keysym" values and back. Usualy two
+tables are used: "local" table for national keys and additional "general" table
+for standart keyboard. Keyboard Map Utility is a program to edit correspondence
+tables.
+
+Tables are held in text files .\keysym\*.xk . VNC Server and VNC Client will
+try to load files in order: user.xk, NNN.xk, general.xk (where NNN is a system
+local page number). Each next loaded file complements common table in memory.
+user.xk - top priority, it can be used for your experiments or external
+non-standard keypads.
+
+When "local" table (NNN.xk) does not exist, VNC Server and VNC Client will try
+to use unicode-related "keysym" values for keys which generate characters.
+RFC 6143, "7.5.4. KeyEvent":
+  "Modern versions of the X Window System handle keysyms for Unicode
+  characters, consisting of the Unicode character with the hex
+  1000000 bit set."
+
+Adding support for a new language with Keyboard Map Utility:
+
+  - Open (empty) local table: File -> Open -> Local table (NNN).
+  - Record all national characters keys (Record -> Start - many keys).
+  - Hold Shift and record all these keys again.
+  - Stop recording.
+  - Set correspond XK_xxxxx value for each event (Double click on records or
+    press enter).
+  - Save table: File -> Save.
+
+Note that not all other VNC clients/servers supports national keyboards.
+For more detailed information see RFC 6143, 7.5.4. KeyEvent.
+
+
+Autor
+-----
+
+Donations are most welcome!
+https://www.arcanoae.com/shop/os2-ports-and-applications-by-andrey-vasilkin/
+PayPal: digi@os2.snc.ru
+
+Andrey Vasilkin, 2017
+E-mail: digi@os2.snc.ru
+Jabber: digi@frs.snc.ru
