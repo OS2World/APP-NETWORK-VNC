@@ -5,7 +5,7 @@ utils.o: ..\common\utils.c
 	$(CC) $(CFLAGS) -c $<
 
 $(FILE_RES): $(FILE_RC)
-	$(RC) -i ..\vncpm -r -n $(FILE_RC) >nul
+	$(RC) $(RCCFLAGS)
 
 msgCompilation:
 	@echo   Compilation: $(DESCRIPTION) ver. $(VERSION)

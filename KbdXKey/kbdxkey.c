@@ -1099,8 +1099,6 @@ static VOID _wmChar(HWND hwnd, MPARAM mp1, MPARAM mp2)
 
   if ( pRecord == NULL )
   {
-xkKeysymFromMPAuto( mp1, mp2 );
-debugPCP();
     // Record not found - create a new record.
     pRecord = _insertNewRecord( hwndCtl, pData->hwndNamesTbl,
                                 xkKeysymFromMPAuto( mp1, mp2 ),

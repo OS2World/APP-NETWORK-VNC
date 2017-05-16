@@ -14,6 +14,7 @@
 #include "lnchpad.h"
 #include "pswddlg.h"
 #include "resource.h"
+#include "progress.h"
 #include <debug.h>
 
 #define TIMER_POPUP_ID           1
@@ -27,29 +28,24 @@
 
 typedef struct _DLGINITDATA {
   USHORT               usSize;
-  PCCPROPERTIES        pProperties;
-  BOOL                 fRememberPswd;
-  ULONG                ulMaxAttempts;
-  PSZ                  pszWinTitle;
+  PHOSTDATA            pHostData;
 } DLGINITDATA, *PDLGINITDATA;
 
 typedef struct _DLGDATA {
-  CCPROPERTIES         stProperties;
-  ULONG                ulMaxAttempts;
+  HOSTDATA             stHostData;
   ULONG                ulAttempt;
   PCLNTCONN            pCC;
   PSZ                  pszPrBarText;
   ULONG                ulTimerPopupId;
   ULONG                ulTimerReconnectId;
   HWND                 hwndPswd;
-  BOOL                 fRememberPswd;
   BOOL                 fUseMemorizedPswd;
   PCCLOGONINFO         pLogonInfo;
-  PSZ                  pszWinTitle;
 } DLGDATA, *PDLGDATA;
 
 
 extern HAB             hab;
+extern ULONG           cOpenWin;
 
 static DLGINITDATA     stInitData;
 
@@ -67,7 +63,7 @@ static BOOL _startConnection(HWND hwnd)
   if ( pDlgData->pCC != NULL )
     ccDestroy( pDlgData->pCC );
 
-  pDlgData->pCC = ccCreate( &pDlgData->stProperties, hwnd );
+  pDlgData->pCC = ccCreate( &pDlgData->stHostData.stProperties, hwnd );
   if ( pDlgData->pCC == NULL )
     return FALSE;
 
@@ -112,13 +108,9 @@ static BOOL _wmInitDlg(HWND hwnd, PDLGINITDATA pInitData)
   lpQueryWinPresParam( hwnd );
 
   WinSetWindowPtr( hwnd, QWL_USER, pDlgData );
-  pDlgData->stProperties   = *pInitData->pProperties;
-  pDlgData->fRememberPswd  = pInitData->fRememberPswd;
-  pDlgData->ulMaxAttempts  = pInitData->ulMaxAttempts;
-  pDlgData->ulTimerPopupId = 0;
-  pDlgData->fUseMemorizedPswd = pDlgData->fRememberPswd;
-  pDlgData->pszWinTitle = pInitData->pszWinTitle == NULL ?
-                            NULL : strdup( pInitData->pszWinTitle );
+  pDlgData->stHostData        = *pInitData->pHostData;
+  pDlgData->ulTimerPopupId    = 0;
+  pDlgData->fUseMemorizedPswd = pInitData->pHostData->fRememberPswd;
 
   // Set window title.
   WinQueryWindowText( hwnd, sizeof(acBuf), acBuf );
@@ -132,7 +124,7 @@ static BOOL _wmInitDlg(HWND hwnd, PDLGINITDATA pInitData)
 
   _startConnection( hwnd );
 
-  if ( pDlgData->stProperties.lListenPort >= 0 )
+  if ( pDlgData->stHostData.stProperties.lListenPort >= 0 )
   {
     // Progress bar text in "listen mode".
 
@@ -170,9 +162,6 @@ static VOID _wmDestroy(HWND hwnd)
   if ( pDlgData->ulTimerReconnectId != 0 )
     WinStopTimer( hab, hwnd, pDlgData->ulTimerReconnectId );
 
-  if ( pDlgData->pszWinTitle != NULL )
-    free( pDlgData->pszWinTitle );
-
   if ( pDlgData->pszPrBarText != NULL )
     free( pDlgData->pszPrBarText );
 
@@ -191,19 +180,19 @@ static PSZ _wmSubstituteString(HWND hwnd, USHORT usKey)
       {
         // The function called during WM_INITDLG for the window title.
 
-        if ( pDlgData->stProperties.lListenPort < 0 )
-          return pDlgData->stProperties.acHost;
+        if ( pDlgData->stHostData.stProperties.lListenPort < 0 )
+          return pDlgData->stHostData.stProperties.acHost;
 
         // "Listening mode"
         sprintf( acBuf, "%s:%u",
-                 pDlgData->stProperties.acHost[0] == '\0'
-                   ? "*" : pDlgData->stProperties.acHost,
-                 pDlgData->stProperties.lListenPort );
+                 pDlgData->stHostData.stProperties.acHost[0] == '\0'
+                   ? "*" : pDlgData->stHostData.stProperties.acHost,
+                 pDlgData->stHostData.stProperties.lListenPort );
         return acBuf;
       }
 
     case 1: // %1 - maximum connect attempts (ProgressBar text).
-      return ultoa( stInitData.ulMaxAttempts, acBuf, 10 ); 
+      return ultoa( stInitData.pHostData->ulAttempts, acBuf, 10 ); 
 
     case 2: // %2 - number of connect attempt (ProgressBar text).
       // We don't touch key %2 in dialog loading time. Only when dialog data
@@ -239,6 +228,7 @@ static BOOL _wmTimer(HWND hwnd, ULONG ulTimerId)
     WinSendDlgItemMsg( hwnd, IDPBAR_PROGRESS, PBM_SETPARAM,
                        MPFROMLONG(PBARSF_IMAGE), MPFROMP(&stPrBarInfo) );
 
+    WinSetWindowPos( hwnd, HWND_TOP, 0, 0, 0, 0, SWP_ZORDER );
     _startConnection( hwnd );
   }
   else
@@ -277,9 +267,9 @@ static VOID _wmVNCState(HWND hwnd, ULONG ulState)
       if ( // Logon information typed by user (obtained from dialog).
            ( pDlgData->pLogonInfo != NULL ) &&
            // Need to remember password.
-           pDlgData->fRememberPswd )
+           pDlgData->stHostData.fRememberPswd )
       {
-        lpStoreLogonInfo( pDlgData->stProperties.acHost,
+        lpStoreLogonInfo( pDlgData->stHostData.stProperties.acHost,
                               pDlgData->pLogonInfo );
         memset( pDlgData->pLogonInfo, 0, sizeof(CCLOGONINFO) );
         free( pDlgData->pLogonInfo );
@@ -287,8 +277,9 @@ static VOID _wmVNCState(HWND hwnd, ULONG ulState)
       }
 
       if ( fReady )
-        cwCreate( pDlgData->pCC, pDlgData->stProperties.acHost,
-                  pDlgData->pszWinTitle );
+        cwCreate( pDlgData->pCC, pDlgData->stHostData.stProperties.acHost,
+                  pDlgData->stHostData.acWinTitle,
+                  pDlgData->stHostData.hwndNotify );
       ccUnlockReadyState( pDlgData->pCC );
 
       WinDestroyWindow( hwnd );
@@ -304,8 +295,8 @@ static VOID _wmVNCState(HWND hwnd, ULONG ulState)
       {
         CCLOGONINFO    stLogonInfo;
 
-        if ( !lpQueryLogonInfo( pDlgData->stProperties.acHost, &stLogonInfo,
-                                FALSE ) )
+        if ( !lpQueryLogonInfo( pDlgData->stHostData.stProperties.acHost,
+                                &stLogonInfo, FALSE ) )
         {
           debug( "srvdlgQueryHostPswd() failed" );
           pDlgData->fUseMemorizedPswd = FALSE;
@@ -325,6 +316,7 @@ static VOID _wmVNCState(HWND hwnd, ULONG ulState)
                          MPFROMLONG(PBARSF_ANIMATION), MPFROMP(&stPrBarInfo) );
 
       _wmTimer( hwnd, pDlgData->ulTimerPopupId );
+      WinSetWindowPos( hwnd, HWND_TOP, 0, 0, 0, 0, SWP_ZORDER );
       pDlgData->hwndPswd = pswdlgOpen( pDlgData->pCC, hwnd, FALSE );
       break;
 
@@ -342,8 +334,8 @@ static VOID _wmVNCState(HWND hwnd, ULONG ulState)
         BOOL           fLogRec = ccQuerySessionInfo( pDlgData->pCC,
                                      CCSI_LAST_LOG_REC, sizeof(acBuf), acBuf );
 
-        if ( fLogRec && ( pDlgData->stProperties.lListenPort < 0 ) &&
-             ( pDlgData->ulAttempt < pDlgData->ulMaxAttempts ) )
+        if ( fLogRec && ( pDlgData->stHostData.stProperties.lListenPort < 0 )
+             && ( pDlgData->ulAttempt < pDlgData->stHostData.ulAttempts ) )
         {
           for( ulIdx = 0; ulIdx < ARRAYSIZE(apszTempErr); ulIdx++ )
           {
@@ -369,6 +361,7 @@ static VOID _wmVNCState(HWND hwnd, ULONG ulState)
             stPrBarInfo.ulImageIdx = 1;
             WinSendDlgItemMsg( hwnd, IDPBAR_PROGRESS, PBM_SETPARAM,
                               MPFROMLONG(PBARSF_IMAGE), MPFROMP(&stPrBarInfo) );
+            WinSetWindowPos( hwnd, HWND_TOP, 0, 0, 0, 0, SWP_ZORDER );
 
             // Start reconnect timer.
             pDlgData->ulTimerReconnectId =
@@ -429,7 +422,7 @@ static VOID _wmPswdEnter(HWND hwnd, PCCLOGONINFO pLogonInfo)
   if ( !ccSendLogonInfo( pDlgData->pCC, pLogonInfo ) )
     debugCP( "ccSendLogonInfo() failed" );
 
-  if ( pDlgData->fRememberPswd )
+  if ( pDlgData->stHostData.fRememberPswd )
   {
     if ( pDlgData->pLogonInfo )
       free( pDlgData->pLogonInfo );
@@ -448,10 +441,12 @@ static MRESULT EXPENTRY _dlgProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
   switch( msg )
   {
     case WM_INITDLG:
+      cOpenWin++;
       return (MRESULT)_wmInitDlg( hwnd, (PDLGINITDATA)mp2 );
 
     case WM_DESTROY:
       _wmDestroy( hwnd );
+      cOpenWin--;
       break;
 
     case WM_SUBSTITUTESTRING:
@@ -469,7 +464,7 @@ static MRESULT EXPENTRY _dlgProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
           _cmdCancel( hwnd );
           break;
       }
-      return (MRESULT)TRUE;
+      return (MRESULT)0;
 
     case WM_VNC_STATE:
       _wmVNCState( hwnd, LONGFROMMP(mp2) );
@@ -485,16 +480,12 @@ static MRESULT EXPENTRY _dlgProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
 
 
 // Should be called from the main thread only.
-BOOL prStart(PCCPROPERTIES pProperties, BOOL fRememberPswd, ULONG ulMaxAttempts,
-             PSZ pszWinTitle)
+BOOL prStart(PHOSTDATA pHostData)
 {
   HWND         hwndDlg;
 
-  stInitData.usSize         = sizeof(DLGINITDATA);
-  stInitData.pProperties    = pProperties;
-  stInitData.ulMaxAttempts  = ulMaxAttempts;
-  stInitData.fRememberPswd  = fRememberPswd;
-  stInitData.pszWinTitle    = pszWinTitle;
+  stInitData.usSize     = sizeof(DLGINITDATA);
+  stInitData.pHostData  = pHostData;
 
   hwndDlg = WinLoadDlg( HWND_DESKTOP, HWND_DESKTOP, _dlgProc, NULLHANDLE,
                         IDDLG_PROGRESS, &stInitData );

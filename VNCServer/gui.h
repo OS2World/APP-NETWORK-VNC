@@ -23,7 +23,7 @@
 // Messages from chatwin module.
 #define WMGUI_CHATWIN            (WM_USER + 5)
 
-BOOL guiInit(PCONFIG pConfig);
+BOOL guiInit(PCONFIG pConfig, ULONG ulGUIShowTimeout);
 VOID guiDone();
 
 #endif // GUI_H

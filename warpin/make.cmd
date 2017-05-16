@@ -31,7 +31,7 @@ call SysFileDelete fileWPIOutput
 "set beginlibpath=" || warpinPath
 
 warpinPath || "\WIC.EXE " || fileWPIOutput || " -a " || ,
-"1 -c..\bin vncviewer.exe " || ,
+"1 -c..\bin vncviewer.exe vncv.dll " || ,
 "2 -c..\bin vncserver.exe vncshook.dll -r webclients\*.* " || ,
 "3 -c..\bin vnckbd.sys drvins.cmd " || ,
 "4 -c..\bin kbdxkey.exe keysymdef.h " || ,

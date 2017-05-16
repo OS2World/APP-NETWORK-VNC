@@ -4,7 +4,7 @@
 
 AUTOR = Andrey Vasilkin
 VERSION = 1.0.0
-DEBUGCODE = YES
+# DEBUGCODE = YES
 COMMENT = Presentation Manager hook library
 MSGPREF = [pmhook]
 

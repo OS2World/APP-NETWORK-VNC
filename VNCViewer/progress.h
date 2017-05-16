@@ -3,7 +3,15 @@
 
 #include "clntconn.h"
 
-BOOL prStart(PCCPROPERTIES pProperties, BOOL fRememberPswd,
-             ULONG ulMaxAttempts, PSZ pszWinTitle);
+typedef struct _HOSTDATA {
+  CCPROPERTIES       stProperties;
+  ULONG              ulAttempts;
+  BOOL               fRememberPswd;
+
+  CHAR               acWinTitle[128];
+  HWND               hwndNotify;
+} HOSTDATA, *PHOSTDATA;
+
+BOOL prStart(PHOSTDATA pHostData);
 
 #endif // PROGRESS_H

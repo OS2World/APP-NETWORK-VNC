@@ -40,6 +40,8 @@
 #define WM_TRAYICON             (WM_USER + 3)
 #define WM_TRAYEXIT             0xCD20
 
+#define TIMER_SHOWGUI           1
+
 typedef struct _WINDATA {
   HWND       hwndConfig;         // "Properties" dialog.
   HWND       hwndAttachViewer;   // "Attach listening viewer" dialog.
@@ -60,6 +62,11 @@ typedef struct _WINDATA {
 
   BOOL       fVisible;
 } WINDATA, *PWINDATA;
+
+typedef struct _THREADDATA {
+  PCONFIG    pConfig;
+  ULONG      ulGUIShowTimeout;
+} THREADDATA, *PTHREADDATA;
 
 // hwndSrv uses to send messages from GUI controls to the main thread's hidden
 // window.
@@ -110,8 +117,6 @@ static VOID _ctrlGUIShow(HWND hwnd)
   {
     ULONG    ulMajor, ulMinor, ulRev;
     CHAR     acBuf[128];
-
-    ulWMXSTCreated = xstGetSysTrayCreatedMsgId();
 
     WinQueryWindowText( hwndFrame, sizeof(acBuf), acBuf );
     xstAddSysTrayIcon( hwnd, 0, pData->hptrIcon, acBuf, WMGUI_XSYSTRAY, 0 );
@@ -504,6 +509,15 @@ static MRESULT EXPENTRY wndProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
       return (MRESULT)0;
     }
 
+    case WM_TIMER:
+      if ( SHORT1FROMMP(mp1) == TIMER_SHOWGUI )
+      {
+        WinStopTimer( habGUI, hwndGUI, TIMER_SHOWGUI );
+        WinSendMsg( hwnd, WM_COMMAND, MPFROMSHORT(CMD_GUI_VISIBLE),
+                    MPFROM2SHORT(CMDSRC_OTHER,FALSE) );
+      }
+      break;
+
     case WM_DDE_INITIATEACK:
       _wmDDEInitiateAck( hwnd, (HWND)mp1 );
       return (MRESULT)TRUE;
@@ -583,6 +597,7 @@ static void threadGUI(void *pData)
   QMSG       msg;
   ULONG      ulCreateFlags = FCF_DLGBORDER;
   HWND       hwndFrame;
+  PCONFIG    pConfig = ((PTHREADDATA)pData)->pConfig;
 
   habGUI = WinInitialize( 0 );
   hmqGUI = WinCreateMsgQueue( habGUI, 0 );
@@ -616,6 +631,9 @@ static void threadGUI(void *pData)
         break;
       }
     }
+
+    if ( hmodXSysTray != NULLHANDLE )
+      ulWMXSTCreated = xstGetSysTrayCreatedMsgId();
   }
 
   WinRegisterClass( habGUI, _WIN_CLASS, wndProc, 0, sizeof(PWINDATA) );
@@ -624,34 +642,34 @@ static void threadGUI(void *pData)
   if ( hwndFrame != NULLHANDLE )
   {
     // Restore position from configuration data.
-    if ( ( ((PCONFIG)pData)->lGUIx != LONG_MIN ) &&
-         ( ((PCONFIG)pData)->lGUIy != LONG_MIN ) )
+    if ( ( pConfig->lGUIx != LONG_MIN ) &&
+         ( pConfig->lGUIy != LONG_MIN ) )
     {
       RECTL  rectlDT, rectlWin;
 
       WinQueryWindowRect( HWND_DESKTOP, &rectlDT );
       WinQueryWindowRect( hwndFrame, &rectlWin );
 
-      if ( ((PCONFIG)pData)->lGUIx < rectlDT.xLeft )
-        ((PCONFIG)pData)->lGUIx = rectlDT.xLeft;
+      if ( pConfig->lGUIx < rectlDT.xLeft )
+        pConfig->lGUIx = rectlDT.xLeft;
 
-      if ( ((PCONFIG)pData)->lGUIy < rectlDT.yBottom )
-        ((PCONFIG)pData)->lGUIy = rectlDT.yBottom;
+      if ( pConfig->lGUIy < rectlDT.yBottom )
+        pConfig->lGUIy = rectlDT.yBottom;
 
-      if ( (((PCONFIG)pData)->lGUIx + rectlWin.xRight) > rectlDT.xRight )
-        ((PCONFIG)pData)->lGUIx = rectlDT.xRight - rectlWin.xRight;
+      if ( (pConfig->lGUIx + rectlWin.xRight) > rectlDT.xRight )
+        pConfig->lGUIx = rectlDT.xRight - rectlWin.xRight;
 
-      if ( (((PCONFIG)pData)->lGUIy + rectlWin.yTop) > rectlDT.yTop )
-        ((PCONFIG)pData)->lGUIy = rectlDT.yTop - rectlWin.yTop;
+      if ( (pConfig->lGUIy + rectlWin.yTop) > rectlDT.yTop )
+        pConfig->lGUIy = rectlDT.yTop - rectlWin.yTop;
 
       WinSetWindowPos( hwndFrame, HWND_TOP,
-                       ((PCONFIG)pData)->lGUIx, ((PCONFIG)pData)->lGUIy, 0, 0,
+                       pConfig->lGUIx, pConfig->lGUIy, 0, 0,
                        SWP_MOVE );
     }
 
-    if ( ((PCONFIG)pData)->fGUIVisible )
-      WinSendMsg( hwndGUI, WM_COMMAND, MPFROMSHORT(CMD_GUI_VISIBLE),
-                  MPFROM2SHORT(CMDSRC_OTHER,FALSE) );
+    if ( pConfig->fGUIVisible )
+      WinStartTimer( habGUI, hwndGUI, TIMER_SHOWGUI,
+                     ((PTHREADDATA)pData)->ulGUIShowTimeout * 1000 );
 
     oldWndFrameProc = WinSubclassWindow( hwndFrame, wndFrameProc );
     // oldWndFrameProc is not NULL now and it unblocks guiInit() function.
@@ -672,8 +690,10 @@ static void threadGUI(void *pData)
 }
 
 
-BOOL guiInit(PCONFIG pConfig)
+BOOL guiInit(PCONFIG pConfig, ULONG ulGUIShowTimeout)
 {
+  THREADDATA           stThreadData;
+
   if ( hwndGUI != NULLHANDLE )
   {
     debugPCP( "Already initialized" );
@@ -681,7 +701,9 @@ BOOL guiInit(PCONFIG pConfig)
   }
 
   // Start thread for visible windows (controls, dialogs, menu, e.t.c.).
-  tid = _beginthread( threadGUI, NULL, 65535, (PVOID)pConfig );
+  stThreadData.pConfig = pConfig;
+  stThreadData.ulGUIShowTimeout = ulGUIShowTimeout;
+  tid = _beginthread( threadGUI, NULL, 65535, (PVOID)&stThreadData );
   if ( tid == -1 )
   {
     debug( "_beginthread() failed" );

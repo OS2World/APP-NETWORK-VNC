@@ -28,7 +28,7 @@ $(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) msgBuilding
 	$(LXLITE)
 
 $(FILE_DEF):
-	@%unixroot%\usr\libexec\bin\date +"DESCRIPTION '@#Andrey Vasilkin:$(VERSION)#@##1## %F               %HOSTNAME%::::::@@$(DESCRIPTION)'" >$@
+	@cmd /c %unixroot%\\usr\\libexec\\bin\\date +"DESCRIPTION '@#Andrey Vasilkin:$(VERSION)#@##1## %F               %HOSTNAME%::::::@@$(DESCRIPTION)'" >$@
 	@echo EXPORTS >>$@
 	@echo   xkCompMP >>$@
 	@echo   xkKeysymFromMPAuto >>$@

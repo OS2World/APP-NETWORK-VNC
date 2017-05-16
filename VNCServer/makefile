@@ -11,7 +11,7 @@ NAME = vncserver
 # Binary file extension (dll/exe)
 EXT = exe
 
-VERSION = 0.1.1
+VERSION = 0.1.2
 DESCRIPTION = VNC Server
 
 # Compilation flags for ../common/utils.c
@@ -32,14 +32,14 @@ include ../common/makefile.begin
 
 $(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES) msgBuilding
 	$(CC) $(FILE_DEF) $(LDFLAGS)
+	$(RC) $(RCLFLAGS)
 	$(LXLITE)
-	$(RC) $(RCFLAGS)
 
 $(FILE_DEF):
 ifneq ($(DEBUGCODE),YES)
 	@echo NAME $(NAME) windowapi >$@
 endif
-	@%unixroot%\usr\libexec\bin\date +"DESCRIPTION '@#Andrey Vasilkin:$(VERSION)#@##1## %F               %HOSTNAME%::::::@@$(DESCRIPTION)'" >>$@
+	@cmd /c %unixroot%\\usr\\libexec\\bin\\date +"DESCRIPTION '@#Andrey Vasilkin:$(VERSION)#@##1## %F               %HOSTNAME%::::::@@$(DESCRIPTION)'" >>$@
 
 
 include ../common/makefile.end

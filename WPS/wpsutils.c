@@ -1,0 +1,409 @@
+/*#include <som.h>
+#define INCL_DOS
+#define INCL_WIN
+#define INCL_ERRORS
+#define INCL_DOSMISC
+#define INCL_WINWORKPLACE
+#include <os2.h>*/
+#include "vncv.ih"
+#include "debug.h"
+
+#ifndef DosQueryModFromEIP
+APIRET APIENTRY  DosQueryModFromEIP(HMODULE *phMod, ULONG *pObjNum,
+                                    ULONG BuffLen, PCHAR pBuff, ULONG *pOffset,
+                                    ULONG Address);
+#endif
+
+HMODULE wpsutilGetModuleHandle()
+{
+  HMODULE    hmod = NULLHANDLE;
+  ULONG      ulObjectNumber  = 0;
+  ULONG      ulOffset        = 0;
+  CHAR       szModName[_MAX_PATH];
+
+  DosQueryModFromEIP( &hmod, &ulObjectNumber,
+                      sizeof( szModName), szModName,
+                      &ulOffset, (ULONG)wpsutilGetModuleHandle );
+  return hmod;
+}
+
+BOOL wpsutilLoadStrNew(PVOID somSelf, PSZ pszClass, ULONG ulKey,
+                       PSZ *ppszValue)
+{
+  ULONG      cbValue;
+  PSZ        pszValue;
+
+  if ( !_wpRestoreString( somSelf, pszClass, ulKey, NULL, &cbValue ) )
+    return FALSE;
+
+  if ( cbValue == 0 )
+    pszValue = NULL;
+  else
+  {
+    cbValue++;
+    pszValue = malloc( cbValue );
+    if ( pszValue == NULL )
+      return FALSE;
+
+    if ( !_wpRestoreString( somSelf, pszClass, ulKey, pszValue, &cbValue ) )
+    {
+      free( pszValue );
+      return FALSE;
+    }
+  }
+
+  *ppszValue = pszValue;
+
+  return TRUE;
+}
+
+BOOL wpsutilSetupStrNew(PVOID somSelf, PSZ pszSetupString, PSZ pszKey,
+                        PSZ *ppszValue)
+{
+  ULONG      cbValue;
+  PSZ        pszValue;
+
+  if ( !_wpScanSetupString( somSelf, pszSetupString, pszKey, NULL, &cbValue ) )
+    return FALSE;
+
+  if ( cbValue == 0 )
+    pszValue = NULL;
+  else
+  {
+    cbValue++;
+    pszValue = malloc( cbValue );
+    if ( pszValue == NULL )
+      return FALSE;
+
+    if ( !_wpScanSetupString( somSelf, pszSetupString, pszKey, pszValue,
+                              &cbValue ) )
+    {
+      free( pszValue );
+      return FALSE;
+    }
+  }
+
+  *ppszValue = pszValue;
+
+  return TRUE;
+}
+
+BOOL wpsutilSetupReadBool(PVOID somSelf, PSZ pszSetupString, PSZ pszKey,
+                          PBOOL pfValue)
+{
+  CHAR       acBuf[4] = { 0 };
+  ULONG      cbBuf;
+
+  cbBuf = sizeof(acBuf);
+  if ( !_wpScanSetupString( somSelf, pszSetupString, pszKey, acBuf, &cbBuf ) )
+    return FALSE;
+
+  strupr( acBuf );
+
+  switch( *((PULONG)&acBuf) )
+  {
+    case (ULONG)'\0SEY':    // YES
+    case (ULONG)'\0\0\0Y':  // Y
+    case 0x00000031:        // 1
+    case (ULONG)'\0\0NO':   // ON
+      *pfValue = TRUE;
+      return TRUE;
+  }
+
+  switch( *((PULONG)&acBuf) )
+  {
+    case (ULONG)'\0\0ON':   // NO
+    case (ULONG)'\0\0\0N':  // N
+    case 0x00000030:        // 0
+    case (ULONG)'\0FFO':    // OFF
+      *pfValue = FALSE;
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
+BOOL wpsutilSetupReadULong(PVOID somSelf, PSZ pszSetupString, PSZ pszKey,
+                           PULONG pulValue)
+{
+  CHAR       acBuf[32];
+  ULONG      cbBuf;
+  PCHAR      pcEnd;
+
+  cbBuf = sizeof(acBuf);
+  if ( !_wpScanSetupString( somSelf, pszSetupString, pszKey, acBuf, &cbBuf )
+       || ( cbBuf == 0 ) )
+    return FALSE;
+
+  *pulValue = (ULONG)strtol( acBuf, &pcEnd, 0 );
+
+  return pcEnd != acBuf;
+}
+
+/*
+   PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
+
+   Creates an icon from the bitmap. Result is a pointer to icon data - like
+   ICO-file content in memory. Pointer should be destroyed with free().
+   Returns NULL on error.
+ */
+
+#pragma pack(1)
+typedef struct _BM12INF {
+  USHORT     usHdr;          // "CI" 0x4943
+  ULONG      ulSize;         // sizeof(struct _PF12BMINF) - 0x1A (26)
+  USHORT     usHotX;
+  USHORT     usHotY;
+  ULONG      ulBMOffset;     // From the beginning of the file.
+  ULONG      ulBMSize;       // Always 12.
+  USHORT     usWidth;
+  USHORT     usHeight;
+  USHORT     usPlanes;
+  USHORT     usBitsPerPixel;
+  // -- colors (3 bytes RGB per item), Items: 2^BPP * planes --
+} BM12INF, *PBM12INF;
+#pragma pack()
+
+PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
+{
+  HAB        hab = WinQueryAnchorBlock( HWND_DESKTOP );
+  HDC        hdcIco = DevOpenDC( hab, OD_MEMORY, "*", 0, NULL, NULLHANDLE );
+  HBITMAP    hbmIco = NULLHANDLE;
+  HPS        hpsIco = NULLHANDLE;
+  PBYTE      pbIconData = NULL, pbPtr;
+  SIZEL      sizelIco;
+  CHAR       acbmih[sizeof(BITMAPINFO2)] = { 0 };
+  PBITMAPINFOHEADER2 pbmih = (PBITMAPINFOHEADER2)&acbmih;
+  PBITMAPINFO2       pbmi = NULL;
+  struct {
+    BITMAPINFOHEADER2  stHdr;
+    RGB2               argb2Color[0x100];
+  }          stBmInfo;
+  RECTL      rectlIcon;
+  LONG       lRC;
+  ULONG      cbMaskLine, cbMask, cbIco;
+  ULONG      ulCY, ulCX;
+  BOOL       fSuccess = FALSE;
+
+  if ( hdcIco == NULLHANDLE )
+  {
+    debugCP( "DevOpenDC() failed" );
+    return NULL;
+  }
+
+  do
+  {
+
+    // Create a memory presentation space for the icon image.
+
+    hdcIco = DevOpenDC( hab, OD_MEMORY, "*", 0, NULL, NULLHANDLE );
+    sizelIco.cx = WinQuerySysValue( HWND_DESKTOP, SV_CXICON );
+    sizelIco.cy = WinQuerySysValue( HWND_DESKTOP, SV_CYICON );
+    hpsIco = GpiCreatePS( hab, hdcIco, &sizelIco,
+                          PU_PELS | GPIF_DEFAULT | GPIT_MICRO | GPIA_ASSOC );
+    if ( hpsIco == NULLHANDLE )
+    {
+      debugCP( "GpiCreatePS() failed. Memory PS was not created." );
+      break;
+    }
+
+    pbmih->cbFix           = sizeof(BITMAPINFOHEADER2);
+    pbmih->cx              = sizelIco.cx;
+    pbmih->cy              = sizelIco.cy;
+    pbmih->cPlanes         = 1;
+    pbmih->cBitCount       = 24;
+    pbmi = (PBITMAPINFO2)pbmih;
+    hbmIco = GpiCreateBitmap( hpsIco, pbmih, 0, NULL, pbmi );
+    if ( ( hbmIco == GPI_ERROR ) || ( hbmIco == NULLHANDLE ) )
+    {
+      debug( "GpiCreateBitmap() failed: %u x %u, bpp: %u",
+             pbmih->cx, pbmih->cy, pbmih->cBitCount );
+      break;
+    }
+
+    if ( GpiSetBitmap( hpsIco, hbmIco ) == HBM_ERROR )
+    {
+      debug( "GpiSetBitmap(%u, %u) failed", hpsIco, hbmIco );
+      break;
+    }
+
+
+    // Draw icon image in memory presentation space.
+
+    // Query bitmap size.
+    memset( &stBmInfo, 0, sizeof(stBmInfo) );
+    stBmInfo.stHdr.cbFix = sizeof(BITMAPINFOHEADER2);
+    if ( !GpiQueryBitmapInfoHeader( hBmp, &stBmInfo.stHdr ) )
+    {
+      debug( "GpiQueryBitmapInfoHeader(%u,) failed", hBmp );
+      break;
+    }
+
+    // Calculate proportional size and position (at center) of image.
+    if ( (stBmInfo.stHdr.cy * sizelIco.cx) < (sizelIco.cy * stBmInfo.stHdr.cx) )
+    {
+      ulCX = sizelIco.cx;
+      ulCY = (ulCX * stBmInfo.stHdr.cy) / stBmInfo.stHdr.cx;
+      rectlIcon.xLeft = 0;
+      rectlIcon.yBottom = ( sizelIco.cy - ulCY ) / 2;
+    }
+    else
+    {
+      ulCY = sizelIco.cy;
+      ulCX = (ulCY * stBmInfo.stHdr.cx) / stBmInfo.stHdr.cy;
+      rectlIcon.yBottom = 0;
+      rectlIcon.xLeft = ( sizelIco.cx - ulCX ) / 2;
+    }
+    rectlIcon.xRight = rectlIcon.xLeft + ulCX;
+    rectlIcon.yTop   = rectlIcon.yBottom + ulCY;
+
+    // Draw (compressing) given bitmap to the new image.
+    if ( !WinDrawBitmap( hpsIco, hBmp, NULL, (PPOINTL)&rectlIcon, 0, 0,
+                         DBM_NORMAL | DBM_STRETCH ) )
+    {
+      debug( "WinDrawBitmap(,%u,,,,,) failed", hBmp );
+      break;
+    }
+
+
+    // Make pointer (icon) data.
+
+    // Calculate mask bitmap size.
+    cbMaskLine = ( (pbmih->cx + 31) / 32 ) * 4;
+    cbMask = cbMaskLine * 2 /* 2: AndXor mask - double height */ * pbmih->cy;
+    // Calculate color image bitmap size.
+    cbIco = pbmih->cx * 3 * pbmih->cy;
+
+    /* Fill icon data:
+     *   AndXor mask bitmap header,
+     *   Paletter AndXor mask bitmap: 2 x RGB = 6 bytes,
+     *   Color bitmap header,
+     *   AndXor mask bitmap data,
+     *   Color bitmap data.
+     */
+    pbIconData = malloc( (sizeof(BM12INF) * 2) + 6 + cbMask + cbIco );
+    if ( pbIconData == NULL )
+      break;
+    pbPtr = pbIconData;
+
+    // Header for the mask bitmap in pointer (icon).
+    ((PBM12INF)pbPtr)->usHdr = 0x4943;
+    ((PBM12INF)pbPtr)->ulSize = 0x1A;
+    ((PBM12INF)pbPtr)->usHotX = sizelIco.cx / 2;
+    ((PBM12INF)pbPtr)->usHotY = sizelIco.cy / 2;
+    ((PBM12INF)pbPtr)->ulBMOffset = (sizeof(BM12INF) * 2) + 6;
+    ((PBM12INF)pbPtr)->ulBMSize = 12;
+    ((PBM12INF)pbPtr)->usWidth = sizelIco.cx;
+    ((PBM12INF)pbPtr)->usHeight = sizelIco.cy * 2; // AndXor - two masks.
+    ((PBM12INF)pbPtr)->usPlanes = 1;
+    ((PBM12INF)pbPtr)->usBitsPerPixel = 1;
+    pbPtr += sizeof(BM12INF);
+    *((PULONG)pbPtr) = 0;
+    pbPtr += 3;
+    *((PULONG)pbPtr) = 0xFFFFFFFF;
+    pbPtr += 3;
+
+    // Header for the color bitmap in pointer (icon).
+    ((PBM12INF)pbPtr)->usHdr = 0x4943;
+    ((PBM12INF)pbPtr)->ulSize = 0x1A;
+    ((PBM12INF)pbPtr)->usHotX = sizelIco.cx / 2;
+    ((PBM12INF)pbPtr)->usHotY = sizelIco.cy / 2;
+    ((PBM12INF)pbPtr)->ulBMOffset = (sizeof(BM12INF) * 2) + 6 + cbMask;
+    ((PBM12INF)pbPtr)->ulBMSize = 12;
+    ((PBM12INF)pbPtr)->usWidth = sizelIco.cx;
+    ((PBM12INF)pbPtr)->usHeight = sizelIco.cy;
+    ((PBM12INF)pbPtr)->usPlanes = 1;
+    ((PBM12INF)pbPtr)->usBitsPerPixel = 24;
+    pbPtr += sizeof(BM12INF);
+
+    // Fill mask data for the pointer (icon).
+    memset( pbPtr, 0x00, pbmih->cy * cbMaskLine );
+    pbPtr += pbmih->cy * cbMaskLine;
+    memset( &pbPtr[pbmih->cy * cbMaskLine], 0x00, pbmih->cy * cbMaskLine );
+    if ( ulCX == sizelIco.cx ) // Horizontal?
+    {
+      for( ulCY = 0; ulCY < pbmih->cy; ulCY++ )
+      {
+        memset( pbPtr,
+                ( ulCY < rectlIcon.yBottom ) || ( ulCY >= rectlIcon.yTop )
+                  ? 0xFF : 0x00,
+                cbMaskLine );
+        pbPtr += cbMaskLine;
+      }
+    }
+    else
+    {
+      PBYTE           pbMask = pbPtr;
+      BYTE            bMask = 0;
+
+      for( ulCX = 0; ulCX < pbmih->cx; ulCX++ )
+      {
+        if ( ( ulCX < rectlIcon.xLeft ) || ( ulCX >= rectlIcon.xRight ) )
+          bMask |= 1 << (7 - (ulCX & 0x1F));
+
+        if ( (ulCX & 0x07) == 0x07 )
+        {
+          *pbMask = bMask;
+          bMask = 0;
+          pbMask++;
+        }
+      }
+
+      if ( (ulCX & 0x07) != 0x07 )
+        *pbMask = bMask;
+      pbMask = pbPtr;
+
+      for( ulCY = 1; ulCY < pbmih->cy; ulCY++ )
+      {
+        pbPtr += cbMaskLine;
+        memcpy( pbPtr, pbMask, cbMaskLine );
+      }
+      pbPtr += cbMaskLine;
+    }
+
+    // Append color data to the pointer (icon).
+    memset( &stBmInfo, 0, sizeof(BITMAPINFOHEADER2) );
+    stBmInfo.stHdr.cbFix     = sizeof(BITMAPINFOHEADER2);
+    stBmInfo.stHdr.cPlanes   = pbmih->cPlanes;
+    stBmInfo.stHdr.cBitCount = pbmih->cBitCount;
+
+    lRC = GpiQueryBitmapBits( hpsIco, 0, pbmih->cy, pbPtr,
+                              (PBITMAPINFO2)&stBmInfo );
+    if ( ( lRC == 0 ) || ( lRC == GPI_ALTERROR ) )
+    {
+      debugCP( "GpiQueryBitmapBits() failed" );
+      break;
+    }
+
+    // Return size of the icon data.
+    pbPtr += cbIco;
+    *pulSize = pbPtr - pbIconData;
+
+    fSuccess = TRUE;   // All done, no errors.
+  }
+  while( FALSE );
+
+
+  // Free objects.
+
+  if ( hpsIco != NULLHANDLE )
+  {
+    GpiSetBitmap( hpsIco, NULLHANDLE );
+    GpiDestroyPS( hpsIco );
+  }
+
+  DevCloseDC( hdcIco );
+
+  if ( hbmIco != NULLHANDLE )
+    GpiDeleteBitmap( hbmIco );
+
+  if ( !fSuccess )
+  {
+    // Error occurred.
+    if ( pbIconData != NULL )
+      free( pbIconData );
+    return NULL;
+  }
+
+  return pbIconData;
+}

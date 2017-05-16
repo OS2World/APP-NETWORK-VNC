@@ -5,11 +5,11 @@ FILE_DEF = $(NAME).def
 FILE_RC  = $(NAME).rc
 FILE_RES = $(NAME).res
 
-CC = @gcc
-RC = @rc
-AR = @ar
+CC = gcc
+RC = rc
+AR = ar
 
-LXLITE = @lxlite /CS $(FILE_BIN) >nul
+LXLITE = @lxlite /CS $(FILE_BIN)
 
 CFLAGS += -Wall -s -Wno-format -I. \
           -I./ -I../libvncserver -I../common -I../os2xkey -I../vncpm \
@@ -19,7 +19,7 @@ CFLAGS += -Wall -s -Wno-format -I. \
 ifeq ($(DEBUGCODE),YES)
 SRCS += ..\common\debug.c
 CFLAGS += -DDEBUG_FILE=\"$(NAME).dbg\"
-DESCRIPTION += (debug)
+DESCRIPTION += - debug
 endif
 
 OBJS = $(SRCS:.c=.o)
@@ -31,7 +31,14 @@ endif
 LDFLAGS += -Zomf $(OBJS) $(LIBS) -o $(FILE_BIN)
 # -Zlinker option -Zlinker eliminate
 
-RCFLAGS = -n $(FILE_RES) $(FILE_BIN) >nul
+
+RC = rc.exe
+RCCFLAGS = -i ..\vncpm -r -n $(FILE_RC)
+RCLFLAGS = -n $(FILE_RES) $(FILE_BIN)
+
+#RC = wrc.exe
+#RCCFLAGS = -q -r -i=..\vncpm $(FILE_RC)
+#RCLFLAGS = -q $(FILE_RES) $(FILE_BIN)
 
 
 ifeq ($(EXT),dll)

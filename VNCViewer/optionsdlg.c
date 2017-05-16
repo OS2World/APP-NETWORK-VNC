@@ -142,7 +142,8 @@ static VOID _optdlgSetupSlider(HWND hwnd, ULONG ulId)
 
   if ( hwndCtl == NULLHANDLE )
   {
-    printf( "Slider #%u not exist\n", ulId );
+    // [Digi] 5.05.2017 printf() -> debug()
+    debug( "Slider #%u not exist", ulId );
     return;
   }
 
@@ -163,7 +164,8 @@ static VOID _optdlgSetupSlider(HWND hwnd, ULONG ulId)
 
 static BOOL _wmInitDlg(HWND hwnd, PDLGINITDATA pInitData)
 {
-  PSZ                  apszBPP[3] = { "8", "16", "32" };
+  // [Digi] 5.05.2017 "static" added.
+  static PSZ           apszBPP[3] = { "8", "16", "32" };
   PWINDATA             pWinData = calloc( 1, sizeof(WINDATA) );
   POPTDLGDATA          pDataIn = pInitData->pData;
   CHAR                 acTitle[64];

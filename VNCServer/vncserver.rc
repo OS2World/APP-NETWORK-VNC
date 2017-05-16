@@ -37,6 +37,9 @@ MESSAGETABLE
   IDMSG_USER_DISCONNECT   "User disconnected"
   IDMSG_CHAT_NOT_DETECTED "TextChat feature was not detected for this viewer.\1"
                           "Do you want to try it anyway?"
+  IDMSG_ALREADY_RUNNING   "Another instance of " APP_NAME " is already running.\1"
+                          "Do you want to open properties notebook?"
+  IDMSG_NOT_RUNNING       APP_NAME " is not running"
 }
 
 MENU IDMNU_MAIN

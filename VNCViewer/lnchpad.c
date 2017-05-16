@@ -38,14 +38,7 @@
 #define INI_APP_DEFAULT          ".Default"
 
 extern HAB             hab;
-
-
-typedef struct _HOSTDATA {
-  CCPROPERTIES       stProperties;
-  ULONG              ulAttempts;
-  BOOL               fRememberPswd;
-  CHAR               acWinTitle[128];
-} HOSTDATA, *PHOSTDATA;
+extern ULONG           cOpenWin;
 
 typedef struct _DLGINITDATA {
   USHORT             usSize;
@@ -192,8 +185,10 @@ static VOID _iniQueryHost(HINI hIni, PSZ pszHost, PHOSTDATA pHost)
   pHost->stProperties.acDestHost[0] = '\0';
   pHost->stProperties.ulQoS_DSCP = 0;
 
-  // We don't store window title in INI-file, for cli only (-t).
+  // We don't store window title and Notification-window handle in INI-file,
+  // it uses for cli only (-t, -N).
   pHost->acWinTitle[0] = '\0';
+  pHost->hwndNotify = NULLHANDLE;
 
   pHost->stProperties.lListenPort = -1;
 
@@ -370,8 +365,7 @@ static VOID _cmdPageConnectOk(HWND hwnd)
   if ( hIni != NULLHANDLE )
     PrfCloseProfile( hIni );
 
-  prStart( &stHost.stProperties, stHost.fRememberPswd, stHost.ulAttempts,
-           NULL );
+  prStart( &stHost );
   WinDestroyWindow( WinQueryWindow( WinQueryWindow( hwnd, QW_OWNER ),
                     QW_PARENT ) );
 }
@@ -686,8 +680,7 @@ static VOID _cmdPageListenOk(HWND hwnd)
   }
   else
   {
-    prStart( &stHost.stProperties, stHost.fRememberPswd, stHost.ulAttempts,
-             NULL );
+    prStart( &stHost );
 
     // Destroy launchpad dialog.
     WinDestroyWindow( WinQueryWindow( WinQueryWindow( hwnd, QW_OWNER ),
@@ -756,8 +749,13 @@ static MRESULT EXPENTRY _dlgProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
 {
   switch( msg )
   {
+    case WM_INITDLG:
+      cOpenWin++;
+      break;
+
     case WM_DESTROY:
       lpStoreWinPresParam( hwnd );
+      cOpenWin--;
       break;
 
     case WM_CLOSE:
@@ -1025,16 +1023,15 @@ BOOL lpQueryWinRect(PSZ pszHost, PRECTL pRect)
   return fSuccess;
 }
 
-
 BOOL lpCommitArg(int argc, char** argv)
 {
-  PHOSTDATA  pHost, pHostsNew, pHosts = NULL;
-  ULONG      cHosts = 0;
-  HINI       hIni;
-  CHAR       chSw;
-  PSZ        pszVal;
-  ULONG      cbVal;
-  LONG       lErrorMsgId = -1; // Error message id in rosource message table.
+  PHOSTDATA    pHost, pHostsNew, pHosts = NULL;
+  ULONG        cHosts = 0;
+  HINI         hIni;
+  CHAR         chSw;
+  PSZ          pszVal;
+  ULONG        cbVal;
+  LONG         lErrorMsgId = -1; // Error message id in rosource message table.
 
   if ( argc <= 1 )
   {
@@ -1065,7 +1062,7 @@ BOOL lpCommitArg(int argc, char** argv)
 
     chSw = (*argv)[1]; // The switch character after '-'.
 
-    if ( strchr( "hlravcdeoqt", chSw ) != NULL )
+    if ( strchr( "hlravcdseoqtEN", chSw ) != NULL )
     {
       // The switch must have value (like: "-a123" or "-a 123" ).
 
@@ -1151,7 +1148,9 @@ BOOL lpCommitArg(int argc, char** argv)
           if ( ( cbVal == 1 && pszVal[0] == '*' ) ||
                ( cbVal == 3 && memicmp( pszVal, "any", 3 ) == 0 ) )
             // '*' or 'any' instead ip-address.
-            pHost->stProperties.acHost[0] = '\0';
+//            [Digi] 7.05.2017 Next comented line changed on "cbVal = 0;"
+//            pHost->stProperties.acHost[0] = '\0';
+            cbVal = 0;
           else
           {
             if ( cbVal >= sizeof(pHost->stProperties.acHost) )
@@ -1168,6 +1167,14 @@ BOOL lpCommitArg(int argc, char** argv)
       case 'r':        // -r <1|Y|YES|ON|0|N|NO|OFF> - Remember password.
         if ( !utilStrToBool( cbVal, pszVal, &pHost->fRememberPswd ) )
           lErrorMsgId = IDM_SW_INVALID_VALUE;
+        else if ( !pHost->fRememberPswd )
+        {
+          // On "-r N" we remove password from INI immediately.
+          PrfWriteProfileData( hIni, pHost->stProperties.acHost,
+                               "UserPassword", NULL, 0 );
+          PrfWriteProfileData( hIni, pHost->stProperties.acHost,
+                               "Password", NULL, 0 );
+        }
         break;
 
       case 'a':        // -a NN                      - Connection attempts.
@@ -1176,11 +1183,12 @@ BOOL lpCommitArg(int argc, char** argv)
         break;
 
       case 'v':        // -v <1|Y|YES|ON|0|N|NO|OFF> - View-only mode.
-        if ( !utilStrToBool( cbVal, pszVal, &pHost->stProperties.fViewOnly ) )
+        if ( !utilStrToBool( cbVal, pszVal,
+                             &pHost->stProperties.fViewOnly ) )
           lErrorMsgId = IDM_SW_INVALID_VALUE;
         break;
 
-      case 'c':        // -c [8|16|32|TrueColor]     - Color depth.
+      case 'c':        // -c <8|16|32|TrueColor>     - Color depth.
         switch( utilStrWordIndex( "8 16 32 TRUECOLOR", cbVal, pszVal ) )
         {
           case 0:  pHost->stProperties.ulBPP = 8;  break;
@@ -1198,7 +1206,8 @@ BOOL lpCommitArg(int argc, char** argv)
         break;
 
       case 's':        // -s  <1|Y|YES|ON|0|N|NO|OFF> - Request shared session.
-        if ( !utilStrToBool( cbVal, pszVal, &pHost->stProperties.fShareDesktop ) )
+        if ( !utilStrToBool( cbVal, pszVal,
+                             &pHost->stProperties.fShareDesktop ) )
           lErrorMsgId = IDM_SW_INVALID_VALUE;
         break;
 
@@ -1222,6 +1231,15 @@ BOOL lpCommitArg(int argc, char** argv)
 
       case 't':        // -t "Window title"          - Window title.
         strlcpy( pHost->acWinTitle, pszVal, sizeof(pHost->acWinTitle) );
+        break;
+
+      case 'E':        // -E <charset>               - Character encoding.
+        strlcpy( pHost->stProperties.acCharset, pszVal, CHARSET_NAME_MAX_LEN );
+        break;
+
+      case 'N':        // -N N                       - Notification-window hdl.
+        if ( !utilStrToULong( cbVal, pszVal, 1, ~0, &pHost->hwndNotify ) )
+          lErrorMsgId = IDM_SW_INVALID_VALUE;
         break;
 
       case 'R':        // -R                         - Reset GUI fonts & colors.
@@ -1257,8 +1275,7 @@ BOOL lpCommitArg(int argc, char** argv)
     // Start sessions.
 
     for( pHost = pHosts; cHosts > 0; cHosts--, pHost++ )
-      prStart( &pHost->stProperties, pHost->fRememberPswd, pHost->ulAttempts,
-               pHost->acWinTitle );
+      prStart( pHost );
   }
 
   free( pHosts );

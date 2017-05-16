@@ -13,17 +13,19 @@
 #include "clntwnd.h"
 #include "pmwinmou.h"
 #include "resource.h"
+#include "vncvipc.h"
 #include <debug.h>
 
-#define WIN_CLIENT_CLASS         "VNCVIEWER"
+#define _WIN_CLIENT_CLASS        "VNCVIEWER"
 
 // One-time message to set client connection object and host for a new window.
-#define WM_VNC_SETCLNTCONN       (WM_USER + 200)
-#define WM_MENU_SHOW             (WM_USER + 201)
+#define _WM_INITCLNTWND          (WM_USER + 200)
+#define _WM_MENUSHOW             (WM_USER + 201)
 
 // main.c
 extern HAB             hab;
 extern HMQ             hmq;
+extern ULONG           cOpenWin;
 BOOL _stdcall (*pfnWinRegisterForWheelMsg)(HWND hwnd, ULONG flWindow);
 
 // fxdlg.c
@@ -31,11 +33,12 @@ extern HWND fxdlgOpen(HWND hwndOwner, PSZ pszServer, PCLNTCONN pCC);
 
 static PFNWP           oldWndFrameProc;
 static PFNWP           oldWndMenuProc;
-
+static ULONG           ulWMVNCVNotify = 0;
 
 typedef struct _WINDATA {
   PCLNTCONN            pCC;
   PSZ                  pszHost;
+  HWND                 hwndNotify;
   SHORT                sHSlider;
   SHORT                sVSlider;
   HPS                  hpsMicro;
@@ -47,6 +50,13 @@ typedef struct _WINDATA {
   BOOL                 fActivated;
   PSZ                  pszCBTextRecv;
 } WINDATA, *PWINDATA;
+
+// Data for _WM_INITCLNTWND (mp1)
+typedef struct _INITCLNTWND {
+  PCLNTCONN            pCC;
+  PSZ                  pszHost;
+  HWND                 hwndNotify;
+} INITCLNTWND, *PINITCLNTWND;
 
 
 
@@ -61,7 +71,7 @@ MRESULT EXPENTRY _menuWinProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
         HWND hwndFrame = WinQueryWindow( hwnd, QW_FRAMEOWNER );
         HWND hwndClient = WinWindowFromID( hwndFrame, FID_CLIENT );
 
-        WinSendMsg( hwndClient, WM_MENU_SHOW, 0, 0 );
+        WinSendMsg( hwndClient, _WM_MENUSHOW, 0, 0 );
       }
       break;
   }
@@ -125,7 +135,8 @@ static MRESULT _wmCreate(HWND hwnd, MPARAM mp1, MPARAM mp2)
                      { IDS_SEND_ALT_ESC,   CWC_SEND_ALT_ESC   },
                      { IDS_SEND_ALT_TAB,   CWC_SEND_ALT_TAB   },
                      { IDS_CHAT,           CWC_CHAT           },
-                     { IDS_FILE_TRANSFER,  CWC_FILE_TRANSFER  } };
+                     { IDS_FILE_TRANSFER,  CWC_FILE_TRANSFER  },
+                     { IDS_SCREENSHOT,     CWC_SCREENSHOT     } };
   PWINDATA   pWinData = calloc( 1, sizeof(WINDATA) );
   HWND       hwndFrame = WinQueryWindow( hwnd, QW_PARENT );
 //  HPOINTER   hptrIcon;
@@ -200,7 +211,7 @@ static MRESULT _wmCreate(HWND hwnd, MPARAM mp1, MPARAM mp2)
     }
 
     // Subclass the menu window to cath event when menu is set to appear.
-    // We will send window message WM_MENU_SHOW to the client window.
+    // We will send window message _WM_MENUSHOW to the client window.
     oldWndMenuProc = WinSubclassWindow( hwndMenu, _menuWinProc );
   } // if ( hwndMenu != NULLHANDLE )
 
@@ -297,7 +308,7 @@ static VOID _wmVNCState(HWND hwnd, ULONG ulState)
   }
 }
 
-static MRESULT _wmVNCSetClntConn(HWND hwnd, PCLNTCONN pCC, PSZ pszHost)
+static MRESULT _wmInitClntWnd(HWND hwnd, PINITCLNTWND pInitClntWnd)
 {
   PWINDATA   pWinData = (PWINDATA)WinQueryWindowPtr( hwnd, 0 );
   SIZEL      sizeFrame;
@@ -305,10 +316,12 @@ static MRESULT _wmVNCSetClntConn(HWND hwnd, PCLNTCONN pCC, PSZ pszHost)
   if ( pWinData->pszHost != NULL )
     free( pWinData->pszHost );
   
-  pWinData->pszHost = pszHost != NULL ? strdup( pszHost ) : NULL;
-  pWinData->pCC = pCC;
+  pWinData->pszHost    = pInitClntWnd->pszHost != NULL ?
+                           strdup( pInitClntWnd->pszHost ) : NULL;
+  pWinData->pCC        = pInitClntWnd->pCC;
+  pWinData->hwndNotify = pInitClntWnd->hwndNotify;
 
-  if ( !ccQueryFrameSize( pCC, &sizeFrame ) )
+  if ( !ccQueryFrameSize( pInitClntWnd->pCC, &sizeFrame ) )
   {
     debug( "The connection is not yet ready" );
     return (MRESULT)FALSE;
@@ -356,6 +369,11 @@ static MRESULT _wmVNCSetClientSize(HWND hwnd, USHORT usCX, USHORT usCY)
     }
 
     ulSWPFlags |= SWP_ACTIVATE;
+
+    if ( pWinData->hwndNotify != NULLHANDLE )
+      WinPostMsg( pWinData->hwndNotify, ulWMVNCVNotify,
+                  MPFROMSHORT(VNCVNOTIFY_CLIENTWINDOW),
+                  MPFROMHWND(hwnd) );
   }
   else
   {
@@ -398,6 +416,11 @@ static MRESULT _wmVNCSetClientSize(HWND hwnd, USHORT usCX, USHORT usCY)
                    rectlWin.xRight - rectlWin.xLeft,
                    rectlWin.yTop - rectlWin.yBottom,
                    ulSWPFlags );
+
+  if ( pWinData->hwndNotify != NULLHANDLE )
+    WinPostMsg( pWinData->hwndNotify, ulWMVNCVNotify,
+                MPFROMSHORT(VNCVNOTIFY_SETCLIENTSIZE),
+                MPFROM2SHORT(usCX, usCY) );
 
   return (MRESULT)0;
 }
@@ -477,20 +500,10 @@ static VOID _wmMouse(HWND hwnd, POINTS ptPos, ULONG ulButton)
   ccSendMouseEvent( pWinData->pCC, ptPos.x, ptPos.y, ulButton );
 }
 
-#include <os2xkey.h>
 static VOID _wmChar(HWND hwnd, MPARAM mp1, MPARAM mp2)
 {
   PWINDATA   pWinData = (PWINDATA)WinQueryWindowPtr( hwnd, 0 );
 
-{
-  XKEVENTSTR           stEvent;
-
-  xkEventToStr( mp1, mp2, &stEvent );
-  printf( "Flags: 0x%X %s, Scan: %s, Char: 0x%X, VK: %s, rep: %u\n---\n",
-          SHORT1FROMMP(mp1), stEvent.acFlags, stEvent.acScan, SHORT1FROMMP(mp2),
-          stEvent.acVK,
-          SHORT2FROMMP(mp1) & 0x00FF );
-}
   ccSendWMCharEvent( pWinData->pCC, mp1, mp2 );
 }
 
@@ -844,6 +857,165 @@ static VOID _wmVNCFilexfer(HWND hwnd, MPARAM mp1, MPARAM mp2)
     WinSendMsg( pWinData->hwndFX, WM_VNC_FILEXFER, mp1, mp2 );
 }
 
+static BOOL _wmApp2VNCVScreenshot(HWND hwnd, ULONG cbStorage, PVOID pStorage)
+{
+  PWINDATA     pWinData = (PWINDATA)WinQueryWindowPtr( hwnd, 0 );
+  HPS          hpsMem;
+  HBITMAP      hbmMem;
+  PBITMAPINFO2 pDstBmInfo;
+  PVOID        pDstBmBits;
+  ULONG        ulRC;
+
+  ulRC = DosGetSharedMem( pStorage, PAG_READ | PAG_WRITE );
+  if ( ulRC != NO_ERROR )
+  {
+    debug( "DosGetSharedMem(), rc = %u", ulRC );
+    return FALSE;
+  }
+
+  hpsMem = ccGetHPS( pWinData->pCC );
+  hbmMem = GpiSetBitmap( hpsMem, NULLHANDLE );
+  pDstBmInfo = (PBITMAPINFO2)pStorage;
+  pDstBmBits = &((PBYTE)pStorage)[sizeof(BITMAPINFO2)];
+
+  if ( hbmMem == HBM_ERROR )
+  {
+    debugCP( "GpiSetBitmap() failed" );
+    ccReleaseHPS( pWinData->pCC, hpsMem );
+    return FALSE;
+  }
+
+  GpiSetBitmap( hpsMem, hbmMem );
+
+  memset( pDstBmInfo, 0, sizeof(BITMAPINFO2) );
+  pDstBmInfo->cbFix = sizeof(BITMAPINFOHEADER2);
+  if ( !GpiQueryBitmapInfoHeader( hbmMem, (PBITMAPINFOHEADER2)pDstBmInfo ) )
+  {
+    debugCP( "GpiQueryBitmapInfoHeader() failed" );
+    ccReleaseHPS( pWinData->pCC, hpsMem );
+    return FALSE;
+  }
+
+  if ( GpiQueryBitmapBits( hpsMem, 0, pDstBmInfo->cy, pDstBmBits, pDstBmInfo )
+       == GPI_ALTERROR )
+  {
+    debugCP( "GpiQueryBitmapBits() failed" );
+    ccReleaseHPS( pWinData->pCC, hpsMem );
+    return FALSE;
+  }
+
+  ccReleaseHPS( pWinData->pCC, hpsMem );
+  ulRC = DosFreeMem( pStorage );
+  if ( ulRC != NO_ERROR )
+    debug( "DosFreeMem(), rc = %u", ulRC );
+
+  return TRUE;
+}
+
+static VOID _cmdScreenshot(HWND hwnd)
+{
+  PWINDATA   pWinData = (PWINDATA)WinQueryWindowPtr( hwnd, 0 );
+  HDC        hdcSS = DevOpenDC( hab, OD_MEMORY, "*", 0, NULL, NULLHANDLE );
+  HPS        hpsMem, hpsSS = NULLHANDLE;
+  HBITMAP    hbmSS = NULLHANDLE;
+  POINTL     aPoints[3];
+  BOOL       fSuccess = FALSE;
+  struct {
+    BITMAPINFOHEADER2  stHdr;
+    RGB2               argb2Color[0x100];
+  }                  stBmInfo;
+  PBITMAPINFO2       pbmi = NULL;
+
+  hpsMem = ccGetHPS( pWinData->pCC );
+
+  do
+  {
+    // Get current content (remote desktop) bitmap information.
+    hbmSS = GpiSetBitmap( hpsMem, NULLHANDLE );
+    GpiSetBitmap( hpsMem, hbmSS );
+    memset( &stBmInfo, 0, sizeof(stBmInfo) );
+    stBmInfo.stHdr.cbFix = sizeof(BITMAPINFOHEADER2);
+    if ( !GpiQueryBitmapInfoHeader( hbmSS, &stBmInfo.stHdr ) )
+    {
+      debugCP( "GpiQueryBitmapInfoHeader()" );
+      break;
+    }
+    hbmSS = NULLHANDLE;
+
+    // Create a new memory presentation space.
+    aPoints[1].x = stBmInfo.stHdr.cx;
+    aPoints[1].y = stBmInfo.stHdr.cy;
+    hpsSS = GpiCreatePS( hab, hdcSS, (PSIZEL)&aPoints[1],
+                          PU_PELS | GPIF_DEFAULT | GPIT_MICRO | GPIA_ASSOC );
+    if ( hpsSS == NULLHANDLE )
+    {
+      debug( "GpiCreatePS() failed. Memory PS was not created." );
+      break;
+    }
+
+    // Create a system bitmap object
+
+    stBmInfo.stHdr.cbFix   = sizeof(BITMAPINFOHEADER2);
+    pbmi = (PBITMAPINFO2)&stBmInfo.stHdr;
+
+    hbmSS = GpiCreateBitmap( hpsSS, &stBmInfo.stHdr, 0, NULL, pbmi );
+    if ( ( hbmSS == GPI_ERROR ) || ( hbmSS == NULLHANDLE ) )
+    {
+      debugCP( "GpiCreateBitmap() failed" );
+      hbmSS = NULLHANDLE;
+      break;
+    }
+
+    if ( GpiSetBitmap( hpsSS, hbmSS ) == HBM_ERROR )
+    {
+      debug( "GpiSetBitmap(%u, %u) failed", hpsSS, hbmSS );
+      return;
+    }
+
+    aPoints[0].x = 0;
+    aPoints[0].y = 0;
+    aPoints[2].x = 0;
+    aPoints[2].y = 0;
+    fSuccess = GpiBitBlt( hpsSS, hpsMem, 3, aPoints, ROP_SRCCOPY, BBO_IGNORE )
+                 != GPI_ERROR;
+    ccReleaseHPS( pWinData->pCC, hpsMem );
+    if ( !fSuccess )
+      debug( "GpiBitBlt() failed" );
+  }
+  while( FALSE );
+
+  // Release client's presentation space.
+  ccReleaseHPS( pWinData->pCC, hpsMem );
+  // Destroy temporary presentation space and close a memory device context.
+  if ( hpsSS != NULLHANDLE )
+  {
+    GpiSetBitmap( hpsSS, NULLHANDLE );
+    GpiDestroyPS( hpsSS );
+  }
+  DevCloseDC( hdcSS );
+
+
+  if ( fSuccess )
+  {
+    // We have a bitmap hbmSS and now we put it in the clipboard.
+
+    fSuccess = WinOpenClipbrd( hab );
+    if ( !fSuccess )
+      debug( "WinOpenClipbrd() failed." );
+    else
+    {
+      WinEmptyClipbrd( hab );
+      fSuccess = WinSetClipbrdData( hab, hbmSS, CF_BITMAP, CFI_HANDLE );
+      if ( !fSuccess )
+        debug( "WinSetClipbrdData() failed." );
+      WinCloseClipbrd( hab );
+    }
+  }
+
+  if ( !fSuccess && !GpiDeleteBitmap( hbmSS ) )
+    debug( "GpiDeleteBitmap() failed" );
+}
+
 MRESULT EXPENTRY wndFrameProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
 {
   switch( msg )
@@ -888,10 +1060,12 @@ MRESULT EXPENTRY wndProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
   switch( msg )
   {
     case WM_CREATE:
+      cOpenWin++;
       return _wmCreate( hwnd, mp1, mp2 );
 
     case WM_DESTROY:
       _wmDestroy( hwnd );
+      cOpenWin--;
       break;
 
     case WM_CLOSE:
@@ -1158,10 +1332,14 @@ MRESULT EXPENTRY wndProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
             }
           }
           return (MRESULT)TRUE;
+
+        case CWC_SCREENSHOT:
+          _cmdScreenshot( hwnd );
+          return (MRESULT)TRUE;
       }
       break;
 
-    case WM_MENU_SHOW:           // Window menu becomes visible,
+    case _WM_MENUSHOW:           // Window menu becomes visible,
       _cwTuneMenu( hwnd );       // posted from _menuWinProc().
       return (MRESULT)0;
 
@@ -1169,8 +1347,8 @@ MRESULT EXPENTRY wndProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
       _wmVNCState( hwnd, LONGFROMMP(mp2) );
       return (MRESULT)TRUE;
 
-    case WM_VNC_SETCLNTCONN:
-      return _wmVNCSetClntConn( hwnd, (PCLNTCONN)mp1, (PSZ)mp2 );
+    case _WM_INITCLNTWND:
+      return _wmInitClntWnd( hwnd, (PINITCLNTWND)mp1 );
 
     case WM_VNC_SETCLIENTSIZE:
       return _wmVNCSetClientSize( hwnd, SHORT1FROMMP(mp1), SHORT2FROMMP(mp1) );
@@ -1204,21 +1382,29 @@ MRESULT EXPENTRY wndProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
     case WM_VNC_FILEXFER:
       _wmVNCFilexfer( hwnd, mp1, mp2 );
       return (MRESULT)TRUE;
+
+    case WM_APP2VNCV_SCREENSHOT:
+      return (MRESULT)_wmApp2VNCVScreenshot( hwnd, LONGFROMMP(mp1), PVOIDFROMMP(mp2) );
+/*
+    case WM_APP2VNCV_SCREENSHOT:
+      return (MRESULT)_wmApp2VNCVScreenshot( hwnd, SHORT1FROMMP(mp2), SHORT2FROMMP(mp2) );
+*/
   }
 
   return WinDefWindowProc( hwnd, msg, mp1, mp2 );
 }
 
 
-BOOL cwCreate(PCLNTCONN pCC, PSZ pszHost, PSZ pszWinTitle)
+BOOL cwCreate(PCLNTCONN pCC, PSZ pszHost, PSZ pszWinTitle, HWND hwndNotify)
 {
-  HWND       hwnd;
-  HWND       hwndFrame;
-  ULONG	     ulFrameFlags = FCF_TITLEBAR | FCF_SYSMENU | FCF_MINBUTTON |
-                            FCF_SIZEBORDER | FCF_TASKLIST | FCF_ICON;
-  CHAR       acBuf[128];
+  HWND                 hwnd;
+  HWND                 hwndFrame;
+  ULONG	               ulFrameFlags = FCF_TITLEBAR | FCF_SYSMENU | FCF_ICON |
+                                 FCF_MINBUTTON | FCF_SIZEBORDER | FCF_TASKLIST;
+  CHAR                 acBuf[128];
+  INITCLNTWND          stInitClntWnd;
 
-  WinRegisterClass( hab, WIN_CLIENT_CLASS, wndProc,
+  WinRegisterClass( hab, _WIN_CLIENT_CLASS, wndProc,
                     CS_SIZEREDRAW/* | CS_SYNCPAINT*/,
                     sizeof(PWINDATA) );
 
@@ -1233,7 +1419,7 @@ BOOL cwCreate(PCLNTCONN pCC, PSZ pszHost, PSZ pszWinTitle)
   }
 
   hwndFrame = WinCreateStdWindow( HWND_DESKTOP, 0, &ulFrameFlags,
-                                  WIN_CLIENT_CLASS, pszWinTitle, 0, 0,
+                                  _WIN_CLIENT_CLASS, pszWinTitle, 0, 0,
                                   IDICON_VIEWWIN, &hwnd );
   if ( hwndFrame == NULLHANDLE )
   {
@@ -1244,8 +1430,10 @@ BOOL cwCreate(PCLNTCONN pCC, PSZ pszHost, PSZ pszWinTitle)
   // Subclass frame window to control size changes.
   oldWndFrameProc = WinSubclassWindow( hwndFrame, wndFrameProc );
 
-  if ( !(BOOL)WinSendMsg( hwnd, WM_VNC_SETCLNTCONN, MPFROMP(pCC),
-                          MPFROMP(pszHost) ) )
+  stInitClntWnd.pCC        = pCC;
+  stInitClntWnd.pszHost    = pszHost;
+  stInitClntWnd.hwndNotify = hwndNotify;
+  if ( !(BOOL)WinSendMsg( hwnd, _WM_INITCLNTWND, MPFROMP(&stInitClntWnd), 0 ) )
   {
     WinDestroyWindow( hwndFrame );
     return FALSE;
@@ -1254,4 +1442,15 @@ BOOL cwCreate(PCLNTCONN pCC, PSZ pszHost, PSZ pszWinTitle)
   ccSetWindow( pCC, hwnd );
   WinShowWindow( hwndFrame, TRUE );
   return TRUE;
+}
+
+VOID cwInit()
+{
+  ulWMVNCVNotify = WinAddAtom( WinQuerySystemAtomTable(),
+                               VNCVI_ATOM_WMVNCVNOTIFY );
+}
+
+VOID cwDone()
+{
+  WinDeleteAtom( WinQuerySystemAtomTable(), ulWMVNCVNotify );
 }

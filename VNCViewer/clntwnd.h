@@ -80,9 +80,14 @@
 #define CWC_CHAT                 5106
 #define CWC_FILE_TRANSFER        5107
 #define CWC_FILE_TRANSFER_CLOSE  5108
+#define CWC_SCREENSHOT           5109
+
+VOID cwInit();
+VOID cwDone();
 
 // Creates window for client connection object.
-// pszWinTitle can be NULL - title will be generated on server's information.
-BOOL cwCreate(PCLNTCONN pCC, PSZ pszHost, PSZ pszWinTitle);
+// pszWinTitle can be NULL or an empty string - title will be generated on
+// server's information.
+BOOL cwCreate(PCLNTCONN pCC, PSZ pszHost, PSZ pszWinTitle, HWND hwndNotify);
 
 #endif // CLNTWND_H

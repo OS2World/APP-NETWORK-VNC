@@ -33,6 +33,7 @@ extern HWND            hwndGUI;           // from gui.c
 
 static PSZ              pszDesktopName        = NULL;
 static rfbScreenInfoPtr prfbScreen            = NULL;
+static HPS              hpsScreen             = NULLHANDLE;
 static HPS              hpsMem                = NULLHANDLE;
 static rfbCursor        stCursor;
 static HPOINTER         hptrLastPointer;
@@ -597,7 +598,7 @@ static VOID _SendEvHWScan(ULONG ulScan, BOOL fDown)
   else
   {
     // Translate some OS/2 specified scan codes to HW scan codes.
-    for( ulIdx = 0; ulIdx < ARRAY_SIZE(aExtKeys); ulIdx++ )
+    for( ulIdx = 0; ulIdx < ARRAYSIZE(aExtKeys); ulIdx++ )
     {
       if ( aExtKeys[ulIdx].ucEvScan == ulScan )
       {
@@ -1300,18 +1301,15 @@ static VOID _getScreen(PRECTL prectl)
     BITMAPINFOHEADER2  stHdr;
     RGB2               argb2Color[0x100];
   }          stBmInfo;
-  HPS        hpsScreen;
   POINTL     aPoints[3];
 
   // Y - in frame buffer is lower line relative top of bitmap.
   pbData = (PBYTE)&prfbScreen->frameBuffer[ (prfbScreen->height - prectl->yBottom
                                             - 1) * cbLine ];
 
-  hpsScreen = WinGetScreenPS( HWND_DESKTOP );
   memcpy( aPoints, prectl, sizeof(RECTL) );
   aPoints[2] = aPoints[0];
   lRC = GpiBitBlt( hpsMem, hpsScreen, 3, aPoints, ROP_SRCCOPY, BBO_IGNORE );
-  WinReleasePS( hpsScreen );
 
   if ( lRC == GPI_ERROR )
     debug( "GpiBitBlt() failed" );
@@ -1375,7 +1373,6 @@ static VOID _progsFree()
 BOOL rfbsInit(PCONFIG pConfig)
 {
   LONG       alFormats[2];
-  HPS        hpsDesktop = NULLHANDLE;
   BOOL       fRC;
   PSZ        pszHostName;
 
@@ -1385,19 +1382,19 @@ BOOL rfbsInit(PCONFIG pConfig)
   memset( &stCursor, 0, sizeof(stCursor) );
   aclInit( &stACL );
 
-  hpsDesktop = WinGetScreenPS( HWND_DESKTOP );
-  if ( hpsDesktop == NULLHANDLE )
+  hpsScreen = WinGetScreenPS( HWND_DESKTOP );
+  if ( hpsScreen == NULLHANDLE )
   {
     debug( "WinGetScreenPS() failed" );
     return FALSE;
   }
 
   // Query desktop BPP.
-  fRC = GpiQueryDeviceBitmapFormats( hpsDesktop, 2, (PLONG)&alFormats );
-  WinReleasePS( hpsDesktop );
+  fRC = GpiQueryDeviceBitmapFormats( hpsScreen, 2, (PLONG)&alFormats );
   if ( !fRC )
   {
     debug( "GpiQueryDeviceBitmapFormats() failed" );
+    WinReleasePS( hpsScreen );
     return FALSE;
   }
 
@@ -1416,12 +1413,16 @@ BOOL rfbsInit(PCONFIG pConfig)
                          rectlDesktop.yTop - rectlDesktop.yBottom,
                          alFormats[1], NULL );
   if ( hpsMem == NULLHANDLE )
+  {
+    WinReleasePS( hpsScreen );
     return FALSE;
+  }
 
   // Create and initialize the server. Setup logfile.
   if ( !rfbsSetServer( pConfig ) )
   {
     _memPSDestroy( hpsMem );
+    WinReleasePS( hpsScreen );
     return FALSE;
   }
 
@@ -1488,6 +1489,8 @@ VOID rfbsDone()
     _memPSDestroy( hpsMem );
     hpsMem = NULLHANDLE;
   }
+
+  WinReleasePS( hpsScreen );
 
   if ( pszDesktopName != NULL )
   {

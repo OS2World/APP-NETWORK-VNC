@@ -49,6 +49,11 @@ cd .\vnckbd
 cmd /C make.cmd
 cd..
 
+echo Make: WPS Class
+cd .\WPS
+wmake all
+cd..
+
 if .%1.==.nopack. goto l02
 
 echo.

@@ -28,11 +28,11 @@ include ../common/makefile.begin
 
 $(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES) msgBuilding
 	$(CC) $(FILE_DEF) $(LDFLAGS)
-	$(RC) $(RCFLAGS)
+	$(RC) $(RCLFLAGS)
 	$(LXLITE)
 
 $(FILE_DEF):
-	@%unixroot%\usr\libexec\bin\date +"DESCRIPTION '@#Andrey Vasilkin:$(VERSION)#@##1## %F               %HOSTNAME%::::::@@$(DESCRIPTION)'" >$@
+	@cmd /c %unixroot%\\usr\\libexec\\bin\\date +"DESCRIPTION '@#Andrey Vasilkin:$(VERSION)#@##1## %F               %HOSTNAME%::::::@@$(DESCRIPTION)'" >$@
 	@echo EXPORTS >>$@
 	@echo   chatwinCreate >>$@
 	@echo   prbarRegisterClass >>$@

@@ -4,7 +4,7 @@
 
 NAME = vncpm
 VERSION = 1.0.0
-DEBUGCODE = YES
+# DEBUGCODE = YES
 
 FILE_DLL = $(NAME).dll
 FILE_LIB = $(NAME).a

@@ -9,9 +9,16 @@
 #define INCL_GPIBITMAPS
 #include <os2.h>
 
+#ifdef __WATCOMC__
+#include <types.h>
+#endif
 #include <sys\socket.h>
 #include <sys\ioctl.h>
 #include <arpa\inet.h>
+#ifdef __WATCOMC__
+#include <net\route.h>
+#include <net\if.h>
+#endif
 
 #ifdef UTILS_WITH_OPENSSL
 #include <openssl/bio.h>
@@ -73,9 +80,10 @@ BOOL utilStrCutWord(PULONG pcbText, PCHAR *ppcText,
 //
 // Returns index of word pointed by pcWord (and length equals cbWord) in the
 // list pszList. The list must contain the words separated by a space.
+// When cbWord < 0 the paramether pcWord is treated as a string.
 // The function returns -1 if the word is not found.
 
-LONG utilStrWordIndex(PSZ pszList, ULONG cbWord, PCHAR pcWord)
+LONG utilStrWordIndex(PSZ pszList, LONG cbWord, PCHAR pcWord)
 {
   ULONG		   ulIdx;
   ULONG      cbList;
@@ -84,6 +92,9 @@ LONG utilStrWordIndex(PSZ pszList, ULONG cbWord, PCHAR pcWord)
 
   if ( pcWord == NULL || cbWord == 0 )
     return -1;
+
+  if ( cbWord < 0 )
+    cbWord = strlen( pcWord );
 
   BUF_SKIP_SPACES( cbWord, pcWord );
   BUF_RTRIM( cbWord, pcWord );
@@ -546,12 +557,15 @@ PSZ utilStrNewGetOption(ULONG cbText, PCHAR pcText, PSZ pszName)
   return utilStrNewUnescapeQuotes( cbVal, pcVal, TRUE );
 }
 
-BOOL utilStrToULong(ULONG cbStr, PCHAR pcStr, ULONG ulMin, ULONG ulMax,
+BOOL utilStrToULong(LONG cbStr, PCHAR pcStr, ULONG ulMin, ULONG ulMax,
                     PULONG pulValue)
 {
   CHAR       acVal[24];
   PCHAR      pcEnd;
   ULONG      ulValue;
+
+  if ( cbStr < 0 )
+    cbStr = strlen( pcStr );
 
   BUF_SKIP_SPACES( cbStr, pcStr );
   BUF_RTRIM( cbStr, pcStr );
@@ -573,12 +587,15 @@ BOOL utilStrToULong(ULONG cbStr, PCHAR pcStr, ULONG ulMin, ULONG ulMax,
   return TRUE;
 }
 
-BOOL utilStrToLong(ULONG cbStr, PCHAR pcStr, LONG lMin, LONG lMax,
+BOOL utilStrToLong(LONG cbStr, PCHAR pcStr, LONG lMin, LONG lMax,
                    PLONG plValue)
 {
   CHAR       acVal[24];
   PCHAR      pcEnd;
   LONG       lValue;
+
+  if ( cbStr < 0 )
+    cbStr = strlen( pcStr );
 
   BUF_SKIP_SPACES( cbStr, pcStr );
   BUF_RTRIM( cbStr, pcStr );
@@ -604,7 +621,7 @@ BOOL utilStrToLong(ULONG cbStr, PCHAR pcStr, LONG lMin, LONG lMax,
   return TRUE;
 }
 
-BOOL utilStrToBool(ULONG cbStr, PCHAR pcStr, PBOOL pfValue)
+BOOL utilStrToBool(LONG cbStr, PCHAR pcStr, PBOOL pfValue)
 {
   if ( utilStrWordIndex( "1 Y YES ON", cbStr, pcStr ) != -1 )
   {
@@ -1566,7 +1583,11 @@ BOOL utilMakePathToFile(ULONG cbFName, PCHAR pcFName)
              ( strcmp( pcBuf, ".." ) != 0 ) && ( strcmp( pcBuf, "\\\\" ) != 0 )
            )
          )
+#ifdef __WATCOMC__
+         && ( stat( acBuf, &stStat ) == -1 ) && ( mkdir( acBuf ) == -1 )
+#else
          && ( stat( acBuf, &stStat ) == -1 ) && ( mkdir( acBuf, 0755 ) == -1 )
+#endif
        )
       return FALSE;
 

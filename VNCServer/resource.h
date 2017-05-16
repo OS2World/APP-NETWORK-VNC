@@ -32,6 +32,8 @@
 #define IDMSG_USER_CHAT_LEFT        1
 #define IDMSG_USER_DISCONNECT       2
 #define IDMSG_CHAT_NOT_DETECTED     3
+#define IDMSG_ALREADY_RUNNING       4
+#define IDMSG_NOT_RUNNING           5
 
 #define IDACCTBL_ACL                90
 

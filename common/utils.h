@@ -1,8 +1,6 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#define ARRAYSIZE(a) (sizeof(a) / sizeof(a[0]))
-
 #define BUF_SKIP_SPACES(cb, pc) \
   while( (cb > 0) && isspace( *pc ) ) { cb--; pc++; }
 #define BUF_MOVE_TO_SPACE(cb, pc) \
@@ -33,7 +31,7 @@
 #define BUF_STR_EQ(cb, pc, s) ((cb == strlen(s)) && (memcmp(pc,s,cb) == 0))
 #define BUF_STR_IEQ(cb, pc, s) ((cb == strlen(s)) && (memicmp(pc,s,cb) == 0))
 
-#define ARRAY_SIZE(a) ( sizeof(a) / sizeof(a[0]) )
+#define ARRAYSIZE(a) ( sizeof(a) / sizeof(a[0]) )
 
 #ifndef MAX
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -41,6 +39,13 @@
 
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifdef __WATCOMC__
+#define	LONG_MAX       0x7fffffffL         /* max value for a long */
+#define	LONG_MIN       (-0x7fffffffL - 1)  /* min value for a long */
+#define	ULONG_MAX      (~0)                /* max value for a unsigned long */
+#define	ULONG_MIN      0                   /* min value for a unsigned long */
 #endif
 
 typedef unsigned long long       ULLONG, *PULLONG;
@@ -72,7 +77,7 @@ typedef struct _UTILIPLIST {
 ULONG utilStrWordsCount(ULONG cbText, PCHAR pcText);
 BOOL utilStrCutWord(PULONG pcbText, PCHAR *ppcText,
                     PULONG pcbWord, PCHAR *ppcWord);
-LONG utilStrWordIndex(PSZ pszList, ULONG cbWord, PCHAR pcWord);
+LONG utilStrWordIndex(PSZ pszList, LONG cbWord, PCHAR pcWord);
 VOID utilStrTrim(PSZ pszText);
 BOOL utilStrAddWords(PULONG pcbText, PCHAR *ppcText,
                      ULONG cbWords, PCHAR pcWords,
@@ -85,11 +90,11 @@ PSZ utilStrNewUnescapeQuotes(ULONG cbText, PCHAR pcText, BOOL fIfQuoted);
 PCHAR utilStrFindOption(ULONG cbText, PCHAR pcText,
                         ULONG cbName, PCHAR pcName, PULONG pcbVal);
 PSZ utilStrNewGetOption(ULONG cbText, PCHAR pcText, PSZ pszName);
-BOOL utilStrToULong(ULONG cbStr, PCHAR pcStr, ULONG ulMin, ULONG ulMax,
+BOOL utilStrToULong(LONG cbStr, PCHAR pcStr, ULONG ulMin, ULONG ulMax,
                     PULONG pulValue);
-BOOL utilStrToLong(ULONG cbStr, PCHAR pcStr, LONG lMin, LONG lMax,
+BOOL utilStrToLong(LONG cbStr, PCHAR pcStr, LONG lMin, LONG lMax,
                    PLONG plValue);
-BOOL utilStrToBool(ULONG cbStr, PCHAR pcStr, PBOOL pfValue);
+BOOL utilStrToBool(LONG cbStr, PCHAR pcStr, PBOOL pfValue);
 LONG utilStrFromBytes(ULLONG ullVal, ULONG cbBuf, PCHAR pcBuf);
 BOOL utilStrSplitWords(ULONG cbStr, PCHAR pcStr, PULONG pulWords,
                       PUTILSTRPART pWords);

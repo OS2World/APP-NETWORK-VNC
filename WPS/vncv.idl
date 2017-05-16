@@ -1,0 +1,167 @@
+#ifndef vncv_idl
+#define vncv_idl
+
+#include <wpabs.idl>
+#include <somcls.idl>
+
+interface M_vncv;
+
+interface vncv : WPAbstract
+{
+   // Default values
+   const ULONG DEF_ATTEMPTS       = 5;
+   const ULONG DEF_BPP            = 16;
+   const BOOL  DEF_REMEMBER_PSWD  = FALSE;
+   const BOOL  DEF_VIEW_ONLY      = FALSE;
+   const BOOL  DEF_SHARE_DESKTOP  = TRUE;
+   const PSZ   DEF_ENCODINGS      = "Tight ZRLE Ultra CopyRect Hextile Zlib CoRRE RRE RAW";
+   const ULONG DEF_COMPRESS_LEVEL = 5;
+   const ULONG DEF_QUALITY_LEVEL  = 6;
+   const BOOL  DEF_DYNAMIC_ICON   = TRUE;
+
+   const PSZ   ALL_ENCODINGS      = "RAW CopyRect Tight Hextile Zlib ZlibHex ZRLE ZYWRLE Ultra CoRRE RRE";
+
+   VOID vncvInsertSettingsPages(in HWND hwndDlg);
+   VOID vncvSetDynamicIcon(in BOOL fEnable);
+
+   #ifdef __SOMIDL__
+   implementation
+   {
+      releaseorder: vncvInsertSettingsPages, vncvSetDynamicIcon;
+
+      //  Class Modifiers
+      functionprefix = VNCV_;
+      externalprefix = VNCV_;
+      local;
+      majorversion   = 1;
+      minorversion   = 2;
+      filestem       = vncv;
+      metaclass      = M_vncv;
+      callstyle      = oidl;
+      dllname        = "vncv.dll";
+
+      // object instance data
+      PSZ            pszHostDisplay;
+      // VNC server name and display/port: host[:display]
+      BOOL           fRememberPswd;
+      // TRUE - use stored password, FALSE - prompt user.
+      ULONG          ulAttempts;
+      // Connection attempts (1..10).
+      BOOL           fViewOnly;
+      // View-only mode.
+      ULONG          ulBPP;
+      // Color depth: 8/16/32.
+      BOOL           fShareDesktop;
+      // Request shared session.
+      CHAR           acCharset[32];
+      // Charset encoding for file-exchange and chat.
+      PSZ            pszEncodings;
+      // Encodings: "RAW COPYRECT TIGHT HEXTILE ZLIB ZLIBHEX ZRLE ZYWRLE
+      // ULTRA CORRE RRE". First specified encoding is most prfered.
+      ULONG          ulCompressLevel;
+      // Compress level for encodings: TIGHT, ZLIB and ZLIBHEX (0..9).
+      ULONG          ulQualityLevel;
+      // Quality level for TIGHT and ZYWRLE (0..9).
+      BOOL           fDynamicIcon;
+      // Set screenshots to the object's icon.
+
+      HWND           hwndWaitApp;
+      // This hiden window will receive WM_APPTERMINATENOTIFY messages from PM when
+      // application started by WinStartApp() terminates.
+      ULONG          ulWMVNCVNotify;
+      // Window message from VNC Viewer (atom name VNCVI_ATOM_WMVNCVNOTIFY).
+      HWND           hwndNotebookServerPage;
+
+      BOOL           fSetDynamicIconTime;
+      // Icon changes internaly by this class. Fn. wpSetIconData and wpSetIcon
+      // checks this flag.
+
+      passthru C_ih =
+      "#define INCL_PM"
+      "#define INCL_DOS"
+      "#define INCL_ERRORS"
+      "#include <os2.h>"
+      "#include <stdlib.h>"
+      "#include <string.h>"
+      "#include <stdio.h>"
+      "#include \"wpsutils.h\""
+      "#include <nbpage.h>"
+      "#include \"../VNCViewer/vncvipc.h\""
+      "";
+
+      passthru C_h_after =  ""
+      "#include <start.h>"
+      "#include <vncvrc.h>"
+      ""
+      "#define OPEN_VNCV           (OPEN_USER+1)"
+      ""
+      "//  Keys for save-restore methods"
+      ""
+      "#define SK_HOSTDISPLAY     1"
+      "#define SK_REMEMBERPSWD    2"
+      "#define SK_ATTEMPTS        3"
+      "#define SK_VIEWONLY        4"
+      "#define SK_BPP             5"
+      "#define SK_SHAREDESKTOP    6"
+      "#define SK_ENCODINGS       7"
+      "#define SK_COMPRESSLEVEL   8"
+      "#define SK_QUALITYLEVEL    9"
+      "#define SK_CHARSET        10"
+      "#define SK_DYNAMICICON    11"
+      "";
+
+      // Method Modifiers
+      wpInitData:                      override;
+      wpUnInitData:                    override;
+      wpSaveState:                     override;
+      wpRestoreState:                  override;
+      wpAddSettingsPages:              override;
+      wpAddObjectWindowPage:           override;
+      wpSetup:                         override;
+      wpCreateFromTemplate:            override;
+      wpCopiedFromTemplate:            override;
+      wpOpen:                          override;
+      wpSwitchTo:                      override;
+      // Our wpOpen() does not returns real HWND of vncv's window. We have
+      // only application handle of vncviewer.exe. We need overwrite
+      // wpSwitchTo() to support our switching for OPEN_VNCV view.
+      wpModifyPopupMenu:               override;
+      wpMenuItemSelected:              override;
+      wpSetIconData:                   override;
+      wpSetIcon:                       override;
+   };
+   #endif /* __SOMIDL__ */
+};
+
+interface M_vncv : M_WPAbstract
+{
+   #ifdef __SOMIDL__
+   implementation
+   {
+      // Class Modifiers
+      functionprefix = MVNCV_;
+      externalprefix = MVNCV_;
+      local;
+      majorversion   = 1;
+      minorversion   = 2;
+      filestem       = vncv;
+      callstyle      = oidl;
+      dllname        = "vncv.dll";
+
+      // metaclass data
+      PSZ        pszMleText;
+
+      // Method Modifiers
+      wpclsInitData:                   override;
+      wpclsUnInitData:                 override;
+      wpclsQueryIconData:              override;
+      wpclsQueryTitle:                 override;
+      wpclsQueryStyle:                 override;
+      wpclsCreateDefaultTemplates:     override;
+      wpclsQueryDefaultView:           override;
+
+   };
+   #endif /* __SOMIDL__ */
+};
+
+#endif  /* vncv_idl */

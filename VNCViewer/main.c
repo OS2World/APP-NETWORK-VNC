@@ -7,6 +7,7 @@
 #include "clntconn.h"
 #include "lnchpad.h"
 #include "resource.h"
+#include "clntwnd.h"
 #include <debug.h>
 
 #define _AMOUSE_DLL                        "AMouDll.dll"
@@ -14,6 +15,9 @@
 
 HAB          hab = NULLHANDLE;
 HMQ          hmq = NULLHANDLE;
+ULONG        cOpenWin = 0;     // Opened windows counter for:
+                               // 'lnchpad', 'progress' and 'clntwnd'.
+
 BOOL _stdcall (*pfnWinRegisterForWheelMsg)(HWND hwnd, ULONG flWindow) = NULL;
 
 static HMODULE         hmAMouDll = NULLHANDLE;
@@ -78,6 +82,7 @@ BOOL _appInit()
   }
 
   prbarRegisterClass( hab );
+  cwInit();
 
   return TRUE;
 }
@@ -94,11 +99,13 @@ VOID _appDone()
     DosFreeModule( hmAMouDll );
 
   ccDone();
+  cwDone();
 
   debugPCP( "--- Done ---" );
   debugDone();
 }
 
+#if 0
 static BOOL _appHaveWindows()
 {
   HWND       hwndTop;
@@ -126,18 +133,21 @@ static BOOL _appHaveWindows()
 
   return fFound;
 }
+#endif
 
 static BOOL _appGetMsg(PQMSG pqmsg)
 {
   if ( WinPeekMsg( hab, pqmsg, NULLHANDLE, 0, 0, PM_REMOVE ) )
     return TRUE;
+/*
+  We use the counter cOpenWin check instead of fnunc. _appHaveWindows() call.
 
   if ( !_appHaveWindows() )
     return FALSE;
-
+*/
   ccThreadWatchdog();
 
-  return WinGetMsg( hab, pqmsg, 0, 0, 0 );
+  return ( cOpenWin > 0 ) && WinGetMsg( hab, pqmsg, 0, 0, 0 );
 }
 
 
@@ -157,4 +167,3 @@ int main(int argc, char** argv)
   _appDone();
   return 0;
 }
-

@@ -314,6 +314,7 @@ static BOOL _appInit(int argc, char** argv)
   PCONFIG    pConfig = NULL;
   HWND       hwndGUIRunned;
   LONG       lSignal = -1;
+  ULONG      ulGUIShowTimeout = 0;
 
   debugInit();
 
@@ -326,15 +327,24 @@ static BOOL _appInit(int argc, char** argv)
     if ( argc <= 0 )
       break;
 
-    if ( strcmp( *argv, "-s" ) == 0 )
+    switch( utilStrWordIndex( "-s -t", -1, *argv ) )
     {
-      argv++;
-      argc--;
-      if ( argc > 0 )
-        lSignal = utilStrWordIndex( "properties-open properties-close show "
-                                    "hide shutdown",
-                                    strlen( *argv ), *argv );
-      break;
+      case 0:          // -s <signal> - signal for runned instance.
+        argv++;
+        argc--;
+        if ( argc > 0 )
+          lSignal = utilStrWordIndex( "properties-open properties-close show "
+                                      "hide shutdown",
+                                      -1, *argv );
+        break;
+
+      case 1:          // -t <seconds> - GUI (icon) show timeout.
+        argv++;
+        argc--;
+        if ( !utilStrToULong( -1, *argv, 0, ULONG_MAX / 1000,
+                              &ulGUIShowTimeout ) )
+          ulGUIShowTimeout = 0;
+        break;
     }
   }
 
@@ -379,9 +389,9 @@ static BOOL _appInit(int argc, char** argv)
         case 3:  usCommand = CMD_GUI_HIDDEN;   break; // hide
         case 4:  usCommand = CMD_QUIT;         break; // shutdown
         default:                                      // lSignal == -1
-          WinMessageBox( HWND_DESKTOP, HWND_DESKTOP,
-                         "Another instance of VNC Server is already running",
-                         APP_NAME, 1, MB_OK );
+          if ( utilMessageBox( HWND_DESKTOP, APP_NAME, IDMSG_ALREADY_RUNNING,
+                               MB_ICONASTERISK | MB_YESNO ) == MBID_YES )
+            usCommand = CMD_CONFIG_OPEN;
       }
 
       if ( usCommand != 0 )
@@ -392,8 +402,7 @@ static BOOL _appInit(int argc, char** argv)
 
     if ( lSignal != -1 )
     {
-      WinMessageBox( HWND_DESKTOP, HWND_DESKTOP, "VNC Server is not running",
-                     APP_NAME, 1, MB_OK );
+      utilMessageBox( HWND_DESKTOP, APP_NAME, IDMSG_NOT_RUNNING, MB_OK );
       break;
     }
 
@@ -447,7 +456,7 @@ static BOOL _appInit(int argc, char** argv)
     if ( hwndSrv == NULLHANDLE )
       break;
 
-    guiInit( pConfig );
+    guiInit( pConfig, ulGUIShowTimeout );
 
     if ( pConfig != NULL )
       cfgFree( pConfig );

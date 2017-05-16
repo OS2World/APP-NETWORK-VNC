@@ -60,7 +60,7 @@ Command line switches for VNC Viewer
                                (0/n/no/off) for the password.
   -a NN                      - Connection attempts (1..10).
   -v <1|Y|YES|ON|0|N|NO|OFF> - View-only mode.
-  -c [8|16|32|TrueColor]     - Color depth (TrueColor is 32 BPP).
+  -c <8|16|32|TrueColor>     - Color depth (TrueColor is 32 BPP).
   -d host[:port]             - Destination host.
   -s <1|Y|YES|ON|0|N|NO|OFF> - Request shared session.
   -e "enc1 enc2 ..."         - Support encodings:
@@ -71,6 +71,7 @@ Command line switches for VNC Viewer
                                ZLIBHEX (0..9).
   -q N                       - Quality level for TIGHT and ZYWRLE (0..9).
   -t "Window title"          - Window title.
+  -E charset                 - Server character encoding (for filenames, chat).
 
   -R                         - Reset fonts & colors in the dialog boxes.
 
