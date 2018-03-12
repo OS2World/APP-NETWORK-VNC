@@ -28,6 +28,8 @@ PMHINIT                pmhInit      = NULL;
 PMHDONE                pmhDone      = NULL;
 PMHPOSTEVENT           pmhPostEvent = NULL;
 ATOM                   atomWMVNCServerQuery = 0;
+HWND                   hwndLastUnderPtr = NULLHANDLE;
+CHAR                   acWinUnderPtrClass[128] = { 0 };
 
 static HMODULE         hmodHook     = NULLHANDLE;
 static BOOL            fSetClipboardViewer = FALSE;
@@ -474,9 +476,14 @@ static BOOL _appInit(int argc, char** argv)
 }
 
 
+#define _WINUNDPTR_ODIN          1
+#define _WINUNDPTR_NOTEBOOK      2
+
 int main(int argc, char** argv)
 {
   QMSG       msg;
+  ULONG      ulWinUnderPtr     = 0;
+  RECTL      rectlWinUnderPtr;
 
   if ( !_appInit( argc, argv ) )
     return 1;
@@ -510,36 +517,54 @@ int main(int argc, char** argv)
 
       case HM_MOUSE:
         {
-          // Additioal updates for Odin applications.
+          // Additional updates for Odin applications and notebook bookmarks.
 
           HWND         hwnd = HWNDFROMMP(msg.mp1);
-          CHAR         acBuf[128];
-          LONG         cbBuf = WinQueryClassName( hwnd, sizeof(acBuf), acBuf );
 
-          if ( cbBuf != 0 )
+          if ( hwnd != hwndLastUnderPtr )
           {
-            BOOL       fUpdate = strcmp( acBuf, "Win32WindowClass" ) == 0;
+            LONG       cbBuf = WinQueryClassName( hwnd,
+                                                  sizeof(acWinUnderPtrClass),
+                                                  acWinUnderPtrClass );
 
-            if ( !fUpdate )
+            hwndLastUnderPtr  = hwnd;
+            ulWinUnderPtr     = 0;
+
+            if ( cbBuf == 0 )
+              acWinUnderPtrClass[0] = '\0';
+            else
             {
-              hwnd = WinQueryWindow( hwnd, QW_PARENT );
-              fUpdate =
-                 ( hwnd != NULLHANDLE ) &&
-                 ( WinQueryClassName( hwnd, sizeof(acBuf), acBuf ) != 0 ) &&
-                 ( strcmp( acBuf, "Win32WindowClass" ) == 0 );
-            }
+              if ( strcmp( acWinUnderPtrClass, "Win32WindowClass" ) == 0 )
+                ulWinUnderPtr = _WINUNDPTR_ODIN;
+              else if ( strcmp( acWinUnderPtrClass, "#40" ) == 0 )
+                ulWinUnderPtr = _WINUNDPTR_NOTEBOOK;
+              else
+              {
+                hwnd = WinQueryWindow( hwnd, QW_PARENT );
+                if ( ( hwnd != NULLHANDLE ) &&
+                     ( WinQueryClassName( hwnd, sizeof(acWinUnderPtrClass),
+                                                acWinUnderPtrClass ) != 0 ) &&
+                     ( strcmp( acWinUnderPtrClass, "Win32WindowClass" ) == 0 ) )
+                  ulWinUnderPtr = _WINUNDPTR_ODIN;
+              }
 
-            if ( fUpdate )
-            {
-              // Odin appliation window detected.
-              RECTL      rectlUpdate;
+              if ( ulWinUnderPtr != 0 )
+              {
+                // Odin appliation or notebook window detected.
+                WinQueryWindowRect( HWNDFROMMP(msg.mp1), &rectlWinUnderPtr );
+                WinMapWindowPoints( HWNDFROMMP(msg.mp1), HWND_DESKTOP,
+                                    (PPOINTL)&rectlWinUnderPtr, 2 );
 
-              WinQueryWindowRect( HWNDFROMMP(msg.mp1), &rectlUpdate );
-              WinMapWindowPoints( HWNDFROMMP(msg.mp1), HWND_DESKTOP,
-                                  (PPOINTL)&rectlUpdate, 2 );
-              rfbsUpdateScreen( rectlUpdate );
+                if ( ulWinUnderPtr == _WINUNDPTR_NOTEBOOK )
+                  // Top part with bookmarks only.
+                  rectlWinUnderPtr.yBottom = rectlWinUnderPtr.yTop - 27;
+              }
             }
-          }
+          }  // if ( hwnd != hwndLastUnderPtr )
+
+          if ( ulWinUnderPtr != 0 )
+            // Odin appliation or notebook window under pointer.
+            rfbsUpdateScreen( rectlWinUnderPtr );
 
           // Send mouse event to clients.
           rfbsSetMouse();

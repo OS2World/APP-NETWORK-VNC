@@ -7,6 +7,7 @@
  */
 
 /*
+ *  Copyright (C) 2017 D. R. Commander.  All Rights Reserved.
  *  Copyright (C) 2000, 2001 Const Kaplinsky.  All Rights Reserved.
  *  Copyright (C) 2000 Tridia Corporation.  All Rights Reserved.
  *  Copyright (C) 1999 AT&T Laboratories Cambridge.  All Rights Reserved.
@@ -51,6 +52,11 @@
 #endif
 #include <rfb/rfbproto.h>
 #include <rfb/keysym.h>
+#include "turbojpeg.h"
+
+#ifdef LIBVNCSERVER_HAVE_SASL
+#include <sasl/sasl.h>
+#endif /* LIBVNCSERVER_HAVE_SASL */
 
 #define rfbClientSwap16IfLE(s) \
     (*(char *)&client->endianTest ? ((((s) & 0xff) << 8) | (((s) >> 8) & 0xff)) : (s))
@@ -136,6 +142,7 @@ typedef union _rfbCredential
     char *x509CACrlFile;
     char *x509ClientCertFile;
     char *x509ClientKeyFile;
+    uint8_t x509CrlVerifyMode; /* Only required for OpenSSL - see meanings below */
   } x509Credential;
   /** Plain (VeNCrypt), MSLogon (UltraVNC) */
   struct
@@ -147,6 +154,13 @@ typedef union _rfbCredential
 
 #define rfbCredentialTypeX509 1
 #define rfbCredentialTypeUser 2
+
+/* When using OpenSSL, CRLs can be included in both the x509CACrlFile and appended
+   to the x509CACertFile as is common with OpenSSL.  When rfbX509CrlVerifyAll is
+   specified the CRL list must include CRLs for all certificates in the chain */
+#define rfbX509CrlVerifyNone   0    /* No CRL checking is performed */
+#define rfbX509CrlVerifyClient 1    /* Only the leaf server certificate is checked */
+#define rfbX509CrlVerifyAll    2    /* All certificates in the server chain are checked */
 
 struct _rfbClient;
 
@@ -196,6 +210,11 @@ typedef void (*GotBitmapProc)(struct _rfbClient* client, const uint8_t* buffer, 
 typedef rfbBool (*GotJpegProc)(struct _rfbClient* client, const uint8_t* buffer, int length, int x, int y, int w, int h);
 typedef rfbBool (*LockWriteToTLSProc)(struct _rfbClient* client);
 typedef rfbBool (*UnlockWriteToTLSProc)(struct _rfbClient* client);
+
+#ifdef LIBVNCSERVER_HAVE_SASL
+typedef char* (*GetUserProc)(struct _rfbClient* client);
+typedef char* (*GetSASLMechanismProc)(struct _rfbClient* client, char* mechlist);
+#endif /* LIBVNCSERVER_HAVE_SASL */
 
 typedef struct _rfbClient {
 	uint8_t* frameBuffer;
@@ -278,7 +297,7 @@ typedef struct _rfbClient {
 	uint8_t tightPrevRow[2048*3*sizeof(uint16_t)];
 
 #ifdef LIBVNCSERVER_HAVE_LIBJPEG
-	/** JPEG decoder state. */
+	/** JPEG decoder state (obsolete-- do not use). */
 	rfbBool jpegError;
 
 	struct jpeg_source_mgr* jpegSrcManager;
@@ -391,6 +410,28 @@ typedef struct _rfbClient {
         GotBitmapProc GotBitmap;
         /** Hook for custom JPEG decoding and rendering */
         GotJpegProc GotJpeg;
+
+#ifdef LIBVNCSERVER_HAVE_SASL
+        sasl_conn_t *saslconn;
+        const char *saslDecoded;
+        unsigned int saslDecodedLength;
+        unsigned int saslDecodedOffset;
+        sasl_secret_t *saslSecret;
+
+        /* Callback to allow the client to choose a preferred mechanism. The string returned will
+           be freed once no longer required. */
+        GetSASLMechanismProc GetSASLMechanism;
+        GetUserProc GetUser;
+
+#endif /* LIBVNCSERVER_HAVE_SASL */
+
+#ifdef LIBVNCSERVER_HAVE_LIBZ
+#ifdef LIBVNCSERVER_HAVE_LIBJPEG
+	/** JPEG decoder state. */
+	tjhandle tjhnd;
+
+#endif
+#endif
 } rfbClient;
 
 /* cursor.c */

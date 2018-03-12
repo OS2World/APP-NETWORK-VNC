@@ -148,21 +148,14 @@ BOOL wpsutilSetupReadULong(PVOID somSelf, PSZ pszSetupString, PSZ pszKey,
    Returns NULL on error.
  */
 
-#pragma pack(1)
-typedef struct _BM12INF {
-  USHORT     usHdr;          // "CI" 0x4943
-  ULONG      ulSize;         // sizeof(struct _PF12BMINF) - 0x1A (26)
-  USHORT     usHotX;
-  USHORT     usHotY;
-  ULONG      ulBMOffset;     // From the beginning of the file.
-  ULONG      ulBMSize;       // Always 12.
-  USHORT     usWidth;
-  USHORT     usHeight;
-  USHORT     usPlanes;
-  USHORT     usBitsPerPixel;
-  // -- colors (3 bytes RGB per item), Items: 2^BPP * planes --
-} BM12INF, *PBM12INF;
-#pragma pack()
+static VOID _initBmFileHdr2(PBITMAPFILEHEADER2 pHdr)
+{
+  memset( pHdr, 0, sizeof(BITMAPFILEHEADER2) );
+  pHdr->usType = BFT_COLORICON;
+  pHdr->cbSize = sizeof(BITMAPFILEHEADER2);
+  pHdr->bmp2.cbFix = sizeof(BITMAPINFOHEADER2);
+  pHdr->bmp2.cPlanes = 1;
+}
 
 PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
 {
@@ -172,13 +165,9 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
   HPS        hpsIco = NULLHANDLE;
   PBYTE      pbIconData = NULL, pbPtr;
   SIZEL      sizelIco;
-  CHAR       acbmih[sizeof(BITMAPINFO2)] = { 0 };
+  CHAR       acbmih[sizeof(PBITMAPINFOHEADER2) + (sizeof(RGB2) * 256)] = { 0 };
   PBITMAPINFOHEADER2 pbmih = (PBITMAPINFOHEADER2)&acbmih;
   PBITMAPINFO2       pbmi = NULL;
-  struct {
-    BITMAPINFOHEADER2  stHdr;
-    RGB2               argb2Color[0x100];
-  }          stBmInfo;
   RECTL      rectlIcon;
   LONG       lRC;
   ULONG      cbMaskLine, cbMask, cbIco;
@@ -193,10 +182,8 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
 
   do
   {
-
     // Create a memory presentation space for the icon image.
 
-    hdcIco = DevOpenDC( hab, OD_MEMORY, "*", 0, NULL, NULLHANDLE );
     sizelIco.cx = WinQuerySysValue( HWND_DESKTOP, SV_CXICON );
     sizelIco.cy = WinQuerySysValue( HWND_DESKTOP, SV_CYICON );
     hpsIco = GpiCreatePS( hab, hdcIco, &sizelIco,
@@ -207,11 +194,11 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
       break;
     }
 
-    pbmih->cbFix           = sizeof(BITMAPINFOHEADER2);
-    pbmih->cx              = sizelIco.cx;
-    pbmih->cy              = sizelIco.cy;
-    pbmih->cPlanes         = 1;
-    pbmih->cBitCount       = 24;
+    pbmih->cbFix      = sizeof(BITMAPINFOHEADER2);
+    pbmih->cx         = sizelIco.cx;
+    pbmih->cy         = sizelIco.cy;
+    pbmih->cPlanes    = 1;
+    pbmih->cBitCount  = 24;
     pbmi = (PBITMAPINFO2)pbmih;
     hbmIco = GpiCreateBitmap( hpsIco, pbmih, 0, NULL, pbmi );
     if ( ( hbmIco == GPI_ERROR ) || ( hbmIco == NULLHANDLE ) )
@@ -227,30 +214,29 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
       break;
     }
 
-
     // Draw icon image in memory presentation space.
 
     // Query bitmap size.
-    memset( &stBmInfo, 0, sizeof(stBmInfo) );
-    stBmInfo.stHdr.cbFix = sizeof(BITMAPINFOHEADER2);
-    if ( !GpiQueryBitmapInfoHeader( hBmp, &stBmInfo.stHdr ) )
+    memset( pbmih, 0, sizeof(*pbmih) );
+    pbmih->cbFix = sizeof(BITMAPINFOHEADER2);
+    if ( !GpiQueryBitmapInfoHeader( hBmp, pbmih ) )
     {
       debug( "GpiQueryBitmapInfoHeader(%u,) failed", hBmp );
       break;
     }
 
     // Calculate proportional size and position (at center) of image.
-    if ( (stBmInfo.stHdr.cy * sizelIco.cx) < (sizelIco.cy * stBmInfo.stHdr.cx) )
+    if ( (pbmih->cy * sizelIco.cx) < (sizelIco.cy * pbmih->cx) )
     {
       ulCX = sizelIco.cx;
-      ulCY = (ulCX * stBmInfo.stHdr.cy) / stBmInfo.stHdr.cx;
+      ulCY = (ulCX * pbmih->cy) / pbmih->cx;
       rectlIcon.xLeft = 0;
       rectlIcon.yBottom = ( sizelIco.cy - ulCY ) / 2;
     }
     else
     {
       ulCY = sizelIco.cy;
-      ulCX = (ulCY * stBmInfo.stHdr.cx) / stBmInfo.stHdr.cy;
+      ulCX = (ulCY * pbmih->cx) / pbmih->cy;
       rectlIcon.yBottom = 0;
       rectlIcon.xLeft = ( sizelIco.cx - ulCX ) / 2;
     }
@@ -265,14 +251,13 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
       break;
     }
 
-
     // Make pointer (icon) data.
 
     // Calculate mask bitmap size.
-    cbMaskLine = ( (pbmih->cx + 31) / 32 ) * 4;
-    cbMask = cbMaskLine * 2 /* 2: AndXor mask - double height */ * pbmih->cy;
+    cbMaskLine = ( (sizelIco.cx + 31) / 32 ) * 4;
+    cbMask = cbMaskLine * 2 /* 2: AndXor mask - double height */ * sizelIco.cy;
     // Calculate color image bitmap size.
-    cbIco = pbmih->cx * 3 * pbmih->cy;
+    cbIco = sizelIco.cx * 3 * sizelIco.cy;
 
     /* Fill icon data:
      *   AndXor mask bitmap header,
@@ -281,48 +266,45 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
      *   AndXor mask bitmap data,
      *   Color bitmap data.
      */
-    pbIconData = malloc( (sizeof(BM12INF) * 2) + 6 + cbMask + cbIco );
+    pbIconData = malloc( (sizeof(BITMAPFILEHEADER2) * 2) + 8 + cbMask + cbIco );
     if ( pbIconData == NULL )
       break;
     pbPtr = pbIconData;
 
     // Header for the mask bitmap in pointer (icon).
-    ((PBM12INF)pbPtr)->usHdr = 0x4943;
-    ((PBM12INF)pbPtr)->ulSize = 0x1A;
-    ((PBM12INF)pbPtr)->usHotX = sizelIco.cx / 2;
-    ((PBM12INF)pbPtr)->usHotY = sizelIco.cy / 2;
-    ((PBM12INF)pbPtr)->ulBMOffset = (sizeof(BM12INF) * 2) + 6;
-    ((PBM12INF)pbPtr)->ulBMSize = 12;
-    ((PBM12INF)pbPtr)->usWidth = sizelIco.cx;
-    ((PBM12INF)pbPtr)->usHeight = sizelIco.cy * 2; // AndXor - two masks.
-    ((PBM12INF)pbPtr)->usPlanes = 1;
-    ((PBM12INF)pbPtr)->usBitsPerPixel = 1;
-    pbPtr += sizeof(BM12INF);
-    *((PULONG)pbPtr) = 0;
-    pbPtr += 3;
-    *((PULONG)pbPtr) = 0xFFFFFFFF;
-    pbPtr += 3;
+    _initBmFileHdr2( (PBITMAPFILEHEADER2)pbPtr );
+    ((PBITMAPFILEHEADER2)pbPtr)->xHotspot = sizelIco.cx / 2;
+    ((PBITMAPFILEHEADER2)pbPtr)->yHotspot = sizelIco.cy / 2;
+    ((PBITMAPFILEHEADER2)pbPtr)->offBits  = sizeof(BITMAPFILEHEADER2) * 2 + 8;
+    ((PBITMAPFILEHEADER2)pbPtr)->bmp2.cx  = sizelIco.cx;
+    ((PBITMAPFILEHEADER2)pbPtr)->bmp2.cy  = sizelIco.cy * 2; // Two masks: AND, XOR.
+    ((PBITMAPFILEHEADER2)pbPtr)->bmp2.cBitCount = 1;         // Number of bits per pel within a plane.
+    ((PBITMAPFILEHEADER2)pbPtr)->bmp2.cclrImportant = 2;     // Minimum number of color indexes for satisfactory appearance of the bit map.
+    pbPtr += sizeof(BITMAPFILEHEADER2);
+    *((PULONG)pbPtr) = 0;                  // Palette, first color.
+    pbPtr += 4;
+    *((PULONG)pbPtr) = 0x00FFFFFF;         // Palette, second color.
+    pbPtr += 4;
 
     // Header for the color bitmap in pointer (icon).
-    ((PBM12INF)pbPtr)->usHdr = 0x4943;
-    ((PBM12INF)pbPtr)->ulSize = 0x1A;
-    ((PBM12INF)pbPtr)->usHotX = sizelIco.cx / 2;
-    ((PBM12INF)pbPtr)->usHotY = sizelIco.cy / 2;
-    ((PBM12INF)pbPtr)->ulBMOffset = (sizeof(BM12INF) * 2) + 6 + cbMask;
-    ((PBM12INF)pbPtr)->ulBMSize = 12;
-    ((PBM12INF)pbPtr)->usWidth = sizelIco.cx;
-    ((PBM12INF)pbPtr)->usHeight = sizelIco.cy;
-    ((PBM12INF)pbPtr)->usPlanes = 1;
-    ((PBM12INF)pbPtr)->usBitsPerPixel = 24;
-    pbPtr += sizeof(BM12INF);
+    _initBmFileHdr2( (PBITMAPFILEHEADER2)pbPtr );
+    ((PBITMAPFILEHEADER2)pbPtr)->xHotspot = sizelIco.cx / 2;
+    ((PBITMAPFILEHEADER2)pbPtr)->yHotspot = sizelIco.cy / 2;
+    ((PBITMAPFILEHEADER2)pbPtr)->offBits  = sizeof(BITMAPFILEHEADER2) * 2 + 8 +
+                                            cbMask;
+    ((PBITMAPFILEHEADER2)pbPtr)->bmp2.cx  = sizelIco.cx;
+    ((PBITMAPFILEHEADER2)pbPtr)->bmp2.cy  = sizelIco.cy;
+    ((PBITMAPFILEHEADER2)pbPtr)->bmp2.cBitCount = 24;        // Number of bits per pel within a plane.
+    ((PBITMAPFILEHEADER2)pbPtr)->bmp2.cclrUsed = 1 << 24;    // Number of color indexes used.
+    pbPtr += sizeof(BITMAPFILEHEADER2);
 
     // Fill mask data for the pointer (icon).
-    memset( pbPtr, 0x00, pbmih->cy * cbMaskLine );
-    pbPtr += pbmih->cy * cbMaskLine;
-    memset( &pbPtr[pbmih->cy * cbMaskLine], 0x00, pbmih->cy * cbMaskLine );
+    memset( pbPtr, 0x00, sizelIco.cy * cbMaskLine );
+    pbPtr += sizelIco.cy * cbMaskLine;
+    memset( &pbPtr[sizelIco.cy * cbMaskLine], 0x00, sizelIco.cy * cbMaskLine );
     if ( ulCX == sizelIco.cx ) // Horizontal?
     {
-      for( ulCY = 0; ulCY < pbmih->cy; ulCY++ )
+      for( ulCY = 0; ulCY < sizelIco.cy; ulCY++ )
       {
         memset( pbPtr,
                 ( ulCY < rectlIcon.yBottom ) || ( ulCY >= rectlIcon.yTop )
@@ -336,7 +318,7 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
       PBYTE           pbMask = pbPtr;
       BYTE            bMask = 0;
 
-      for( ulCX = 0; ulCX < pbmih->cx; ulCX++ )
+      for( ulCX = 0; ulCX < sizelIco.cx; ulCX++ )
       {
         if ( ( ulCX < rectlIcon.xLeft ) || ( ulCX >= rectlIcon.xRight ) )
           bMask |= 1 << (7 - (ulCX & 0x1F));
@@ -353,7 +335,7 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
         *pbMask = bMask;
       pbMask = pbPtr;
 
-      for( ulCY = 1; ulCY < pbmih->cy; ulCY++ )
+      for( ulCY = 1; ulCY < sizelIco.cy; ulCY++ )
       {
         pbPtr += cbMaskLine;
         memcpy( pbPtr, pbMask, cbMaskLine );
@@ -362,13 +344,13 @@ PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
     }
 
     // Append color data to the pointer (icon).
-    memset( &stBmInfo, 0, sizeof(BITMAPINFOHEADER2) );
-    stBmInfo.stHdr.cbFix     = sizeof(BITMAPINFOHEADER2);
-    stBmInfo.stHdr.cPlanes   = pbmih->cPlanes;
-    stBmInfo.stHdr.cBitCount = pbmih->cBitCount;
+    memset( pbmih, 0, sizeof(BITMAPINFOHEADER2) );
+    pbmih->cbFix     = sizeof(BITMAPINFOHEADER2);
+    pbmih->cPlanes   = 1;
+    pbmih->cBitCount = 24;
 
-    lRC = GpiQueryBitmapBits( hpsIco, 0, pbmih->cy, pbPtr,
-                              (PBITMAPINFO2)&stBmInfo );
+    lRC = GpiQueryBitmapBits( hpsIco, 0, sizelIco.cy, pbPtr,
+                              (PBITMAPINFO2)pbmih );
     if ( ( lRC == 0 ) || ( lRC == GPI_ALTERROR ) )
     {
       debugCP( "GpiQueryBitmapBits() failed" );

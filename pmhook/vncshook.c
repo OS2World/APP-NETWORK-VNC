@@ -198,6 +198,7 @@ PMHEXPORT BOOL EXPENTRY pmhInputHookProc(HAB hab, PQMSG pqmsg, ULONG ulOption)
     case WM_REALIZEPALETTE:
 //    case WM_USER:      // [eros2] handle xCenter pulse widget update
     case WM_TIMER:     // [eros2] Note: may cause high CPU load
+    case CM_SCROLLWINDOW:        // In container.
       _windowChanged( pqmsg->hwnd );
       break;
 

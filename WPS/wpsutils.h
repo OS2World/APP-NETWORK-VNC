@@ -16,7 +16,8 @@ BOOL wpsutilSetupReadULong(PVOID somSelf, PSZ pszSetupString, PSZ pszKey,
    PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize)
 
    Creates an icon from the bitmap. Result is a pointer to icon data - like
-   ICO-file content in memory. Pointer should be destroyed with free().
+   ICO-file (format 2.0) content in memory. Pointer should be destroyed with
+   free().
    Returns NULL on error.
 */
 PVOID wpsutilIconFromBitmap(HBITMAP hBmp, PULONG pulSize);

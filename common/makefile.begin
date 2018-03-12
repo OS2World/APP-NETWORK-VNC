@@ -6,13 +6,13 @@ FILE_RC  = $(NAME).rc
 FILE_RES = $(NAME).res
 
 CC = gcc
-RC = rc
+RC = rc16
 AR = ar
 
 LXLITE = @lxlite /CS $(FILE_BIN)
 
 CFLAGS += -Wall -s -Wno-format -I. \
-          -I./ -I../libvncserver -I../common -I../os2xkey -I../vncpm \
+          -I./ -I../libvncserver -I../common -I../libvncserver/common -I../os2xkey -I../vncpm \
           -I../libgiconv -I../vnckbd \
           -idirafter /@unixroot/usr/include/os2tk45 -DUSE_OS2_TOOLKIT_HEADERS
 
@@ -32,7 +32,6 @@ LDFLAGS += -Zomf $(OBJS) $(LIBS) -o $(FILE_BIN)
 # -Zlinker option -Zlinker eliminate
 
 
-RC = rc.exe
 RCCFLAGS = -i ..\vncpm -r -n $(FILE_RC)
 RCLFLAGS = -n $(FILE_RES) $(FILE_BIN)
 

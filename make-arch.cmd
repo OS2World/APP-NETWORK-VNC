@@ -42,7 +42,7 @@ EXIT
 rem Build components in sources directories.
 
 set components=libvncserver libgiconv vncpm os2xkey KbdXKey VNCServer VNCViewer
-for %%i in (%components%) do echo Make: %%i & make -s -C ./%%i
+for %%i in (%components%) do @echo Make: %%i & make -s -C ./%%i
 
 echo Make: driver vnckbd.sys
 cd .\vnckbd

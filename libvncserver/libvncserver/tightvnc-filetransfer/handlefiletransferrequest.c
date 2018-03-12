@@ -47,7 +47,6 @@
 #include "filetransfermsg.h"
 #include "handlefiletransferrequest.h"
 
-
 #ifdef _DIGI
 #define pthread_create(a,b,c,d) 0
 #define pthread_mutex_lock(a)

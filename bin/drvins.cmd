@@ -12,6 +12,9 @@
     -D <bootDrive>         System boot drive (for ex. 'C:')
     -I <0|1>               Remove (0) or add (1) line DEVICE= to config.???
 
+  -F will have default value like "D:\path\mydrv.sys" if this script renamed to
+  D:\path\mydrv.cmd
+
   Example:
     drvins.cmd -d C:\ -f vnckbd.sys -i 1
 
@@ -19,22 +22,38 @@
 */
 
 
-debugOutput = 1
+debugOutput = 0
+defDrvFName = ""
 
-/* Try to detect default boot drive */
+/*
+   Try to detect default boot drive.
+*/
+
 parse value value( "path", , "OS2ENVIRONMENT" ) with ,
             ":\OS2" -1 arglist.D ":" .
 if arglist.D = "" then arglist.D = "C"
-/* By default "-i1" - install driver */
-arglist.I = 1
 
-/* Read command line switches to arglist._sw_? :
+
+/*
+   Detect default driver filename.
+*/
+
+parse upper source . . scriptFullFName
+scriptFName = filespec( "name", scriptFullFName )
+if right( scriptFName, 4 ) = ".CMD" & scriptFName \= "DRVINS.CMD" then
+  defDrvFName = left( scriptFullFName, length(scriptFullFName) - 3 ) || "sys"
+arglist.F = defDrvFName
+
+
+/*
+   Read command line switches to arglist._sw_? :
    For example, string "-a 'ab cd' -D E: -n1" will be parsed to:
      arglist.a = "ab cd"
      arglist.D = E:
      arglist.n = 1
      arglist._list = "a D n"
 */
+
 argstr = arg( 1 )
 arglist._list = ""
 do idx = 1 by 1 while argstr \= ""
@@ -55,7 +74,8 @@ arglist._list = strip( arglist._list, "L" )
 
 
 /*  Check switches -F and -I.  */
-if symbol( "arglist.F" ) \= "VAR" | ( arglist.I \= 0 & arglist.I \= 1 ) then
+
+if ( arglist.F = "" ) | ( arglist.I \= 0 & arglist.I \= 1 ) then
   signal Usage
 
 
@@ -107,13 +127,32 @@ end
    Remove "DRIVER=[.....]driver.sys", than add driver in each config.EXT
 */
 
+if RxFuncQuery( "SysLoadFuncs" ) = 1 then
+do
+  call RxFuncAdd "SysLoadFuncs", "RexxUtil", "SysLoadFuncs"
+  call SysLoadFuncs
+end
+
 bkpExt = "001"
 do while cfgExtList \= ""
   parse var cfgExtList cfgExt" "cfgExtList
 
+  /* Check the existence of the config.* file. We use SysFileTree() instead
+     stream( ???, "c", "query exists" ) to keep lowercase/uppercase letters. */
+  rc = SysFileTree( arglist.D"config."cfgExt, "list", "FO" )
+  if rc \= 0 then
+    iterate
+  if list.0 = 0 then
+    iterate
+
+  configFile = list.1
+  parse value filespec( "name", configFile ) with configName"."cfgExt
+/*
+  [Digi 2017.11.06] Old method.
   configFile = stream( arglist.D"config."cfgExt, "c", "query exists" )
   if configFile = "" then
     iterate
+*/
 
   call Log "Read: " || configFile
 
@@ -123,7 +162,7 @@ do while cfgExtList \= ""
     bkpExt = right( bkpExt + 1, 3, "0" )
   end
 
-  tempFile = arglist.D"config.$$D"
+  tempFile = arglist.D || configName || ".$$D"
   if stream( tempFile, "c", "query exists" ) \= "" then
     "@del "tempFile" 2>nul"
 
@@ -173,13 +212,21 @@ Error:
   exit
 
 Usage:
+  CRLF = x2c("D") || x2c("A")
   say "Adds or removes device driver to all config.EXT files, where EXT is "
   say """sys"" and other extensions listed in os2ldr.ini."
   say "Usage:"
-  say "  DRVINS.CMD -F <driver> [-D <bootDrive>] [-I <0|1>]"
-  say
-  say "  -F <driver>            Driver file name."
+  if defDrvFName = "" then
+  do
+    say "  "scriptFName" -F <driver> [-D <bootDrive>] -I <0|1>" || CRLF
+    say "  -F <driver>            Driver file name."
+  end
+  else
+  do
+    say "  "scriptFName" [-F <driver>] [-D <bootDrive>] -I <0|1>" || CRLF
+    say "  -F <driver>            Driver file name."
+    say "                         Default is " || defDrvFName || "."
+  end
   say "  -D <bootDrive>         System boot drive (for ex. 'C:')"
   say "  -I <0|1>               Remove (0) or add (1) line DEVICE= to config.???."
-  say "                         Default is 1."
   exit

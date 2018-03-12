@@ -9,7 +9,7 @@ SRCS = auth.c cargs.c corre.c cursor.c cutpaste.c draw.c font.c hextile.c \
        rfbssl_openssl.c rre.c scale.c selbox.c \
        sockets.c stats.c \
        tight.c translate.c ultra.c websockets.c zlib.c zrle.c \
-       zrleoutstream.c zrlepalettehelper.c \
+       zrleoutstream.c zrlepalettehelper.c ws_decode.c \
        ../common/d3des.c ../common/vncauth.c ../common/minilzo.c \
        ../common/turbojpeg.c ../common/sha1.c
 # SRCS+= ./tightvnc-filetransfer/filelistinfo.c \
@@ -21,7 +21,7 @@ OBJS = $(SRCS:.c=.o)
 
 DEFS += -D_DIGI -D_DIGI_NO_TCP_NODELAY
 
-CFLAGS = -I.. -I../common -I. $(DEFS)
+CFLAGS = -I.. -I../common -I. $(DEFS) -march=pentium -pipe -O3
 
 $(LIB): $(OBJS)
 	$(AR) rc $(LIB) $(OBJS)

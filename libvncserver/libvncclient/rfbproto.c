@@ -47,12 +47,6 @@
 #define Z_NULL NULL
 #endif
 #endif
-#ifdef LIBVNCSERVER_HAVE_LIBJPEG
-#ifdef _RPCNDR_H /* This Windows header typedefs 'boolean', jpeglib has to know */
-#define HAVE_BOOLEAN
-#endif
-#include <jpeglib.h>
-#endif
 
 #ifndef _MSC_VER
 /* Strings.h is not available in MSVC */
@@ -66,6 +60,7 @@
 #include <gcrypt.h>
 #endif
 
+#include "sasl.h"
 #include "minilzo.h"
 #include "tls.h"
 
@@ -160,6 +155,13 @@ static rfbBool HandleUltra32(rfbClient* client, int rx, int ry, int rw, int rh);
 static rfbBool HandleUltraZip8(rfbClient* client, int rx, int ry, int rw, int rh);
 static rfbBool HandleUltraZip16(rfbClient* client, int rx, int ry, int rw, int rh);
 static rfbBool HandleUltraZip32(rfbClient* client, int rx, int ry, int rw, int rh);
+static rfbBool HandleTRLE8(rfbClient* client, int rx, int ry, int rw, int rh);
+static rfbBool HandleTRLE15(rfbClient* client, int rx, int ry, int rw, int rh);
+static rfbBool HandleTRLE16(rfbClient* client, int rx, int ry, int rw, int rh);
+static rfbBool HandleTRLE24(rfbClient* client, int rx, int ry, int rw, int rh);
+static rfbBool HandleTRLE24Up(rfbClient* client, int rx, int ry, int rw, int rh);
+static rfbBool HandleTRLE24Down(rfbClient* client, int rx, int ry, int rw, int rh);
+static rfbBool HandleTRLE32(rfbClient* client, int rx, int ry, int rw, int rh);
 #ifdef LIBVNCSERVER_HAVE_LIBZ
 static rfbBool HandleZlib8(rfbClient* client, int rx, int ry, int rw, int rh);
 static rfbBool HandleZlib16(rfbClient* client, int rx, int ry, int rw, int rh);
@@ -170,13 +172,6 @@ static rfbBool HandleTight16(rfbClient* client, int rx, int ry, int rw, int rh);
 static rfbBool HandleTight32(rfbClient* client, int rx, int ry, int rw, int rh);
 
 static long ReadCompactLen (rfbClient* client);
-
-static void JpegInitSource(j_decompress_ptr cinfo);
-static boolean JpegFillInputBuffer(j_decompress_ptr cinfo);
-static void JpegSkipInputData(j_decompress_ptr cinfo, long num_bytes);
-static void JpegTermSource(j_decompress_ptr cinfo);
-static void JpegSetSrcManager(j_decompress_ptr cinfo, uint8_t *compressedData,
-                              int compressedLen);
 #endif
 static rfbBool HandleZRLE8(rfbClient* client, int rx, int ry, int rw, int rh);
 static rfbBool HandleZRLE15(rfbClient* client, int rx, int ry, int rw, int rh);
@@ -500,6 +495,9 @@ ReadSupportedSecurityType(rfbClient* client, uint32_t *result, rfbBool subAuth)
 #if defined(LIBVNCSERVER_HAVE_GNUTLS) || defined(LIBVNCSERVER_HAVE_LIBSSL)
             tAuth[loop]==rfbVeNCrypt ||
 #endif
+#ifdef LIBVNCSERVER_HAVE_SASL
+            tAuth[loop]==rfbSASL ||
+#endif /* LIBVNCSERVER_HAVE_SASL */
             (tAuth[loop]==rfbARD && client->GetCredential) ||
             (!subAuth && (tAuth[loop]==rfbTLS || (tAuth[loop]==rfbVeNCrypt && client->GetCredential))))
         {
@@ -1084,6 +1082,12 @@ InitialiseRFBConnection(rfbClient* client)
     if (!HandleVncAuth(client)) return FALSE;
     break;
 
+#ifdef LIBVNCSERVER_HAVE_SASL
+  case rfbSASL:
+    if (!HandleSASLAuth(client)) return FALSE;
+    break;
+#endif /* LIBVNCSERVER_HAVE_SASL */
+
   case rfbMSLogon:
     if (!HandleMSLogonAuth(client)) return FALSE;
     break;
@@ -1122,6 +1126,12 @@ InitialiseRFBConnection(rfbClient* client)
         if (!HandleVncAuth(client)) return FALSE;
         break;
 
+#ifdef LIBVNCSERVER_HAVE_SASL
+      case rfbSASL:
+        if (!HandleSASLAuth(client)) return FALSE;
+        break;
+#endif /* LIBVNCSERVER_HAVE_SASL */
+
       default:
         rfbClientLog("Unknown sub authentication scheme from VNC server: %d\n",
             (int)subAuthScheme);
@@ -1150,6 +1160,13 @@ InitialiseRFBConnection(rfbClient* client)
       case rfbVeNCryptX509Plain:
         if (!HandlePlainAuth(client)) return FALSE;
         break;
+
+#ifdef LIBVNCSERVER_HAVE_SASL
+      case rfbVeNCryptX509SASL:
+      case rfbVeNCryptTLSSASL:
+        if (!HandleSASLAuth(client)) return FALSE;
+        break;
+#endif /* LIBVNCSERVER_HAVE_SASL */
 
       default:
         rfbClientLog("Unknown sub authentication scheme from VNC server: %d\n",
@@ -1298,6 +1315,8 @@ SetFormatAndEncodings(rfbClient* client)
 	encs[se->nEncodings++] = rfbClientSwap32IfLE(rfbEncodingZlibHex);
 	if (client->appData.compressLevel >= 0 && client->appData.compressLevel <= 9)
 	  requestCompressLevel = TRUE;
+      } else if (strncasecmp(encStr,"trle",encStrLen) == 0) {
+	encs[se->nEncodings++] = rfbClientSwap32IfLE(rfbEncodingTRLE);
       } else if (strncasecmp(encStr,"zrle",encStrLen) == 0) {
 	encs[se->nEncodings++] = rfbClientSwap32IfLE(rfbEncodingZRLE);
       } else if (strncasecmp(encStr,"zywrle",encStrLen) == 0) {
@@ -2013,6 +2032,47 @@ HandleRFBServerMessage(rfbClient* client)
         break;
       }
 
+      case rfbEncodingTRLE:
+	  {
+        switch (client->format.bitsPerPixel) {
+        case 8:
+          if (!HandleTRLE8(client, rect.r.x, rect.r.y, rect.r.w, rect.r.h))
+            return FALSE;
+          break;
+        case 16:
+          if (client->si.format.greenMax > 0x1F) {
+            if (!HandleTRLE16(client, rect.r.x, rect.r.y, rect.r.w, rect.r.h))
+              return FALSE;
+          } else {
+            if (!HandleTRLE15(client, rect.r.x, rect.r.y, rect.r.w, rect.r.h))
+              return FALSE;
+          }
+          break;
+        case 32: {
+          uint32_t maxColor =
+              (client->format.redMax << client->format.redShift) |
+              (client->format.greenMax << client->format.greenShift) |
+              (client->format.blueMax << client->format.blueShift);
+          if ((client->format.bigEndian && (maxColor & 0xff) == 0) ||
+              (!client->format.bigEndian && (maxColor & 0xff000000) == 0)) {
+            if (!HandleTRLE24(client, rect.r.x, rect.r.y, rect.r.w, rect.r.h))
+              return FALSE;
+          } else if (!client->format.bigEndian && (maxColor & 0xff) == 0) {
+            if (!HandleTRLE24Up(client, rect.r.x, rect.r.y, rect.r.w, rect.r.h))
+              return FALSE;
+          } else if (client->format.bigEndian && (maxColor & 0xff000000) == 0) {
+            if (!HandleTRLE24Down(client, rect.r.x, rect.r.y, rect.r.w,
+                                  rect.r.h))
+              return FALSE;
+          } else if (!HandleTRLE32(client, rect.r.x, rect.r.y, rect.r.w,
+                                   rect.r.h))
+            return FALSE;
+          break;
+        }
+        }
+        break;
+      }
+
 #ifdef LIBVNCSERVER_HAVE_LIBZ
       case rfbEncodingZlib:
       {
@@ -2311,6 +2371,7 @@ HandleRFBServerMessage(rfbClient* client)
 #include "ultra.c"
 #include "zlib.c"
 #include "tight.c"
+#include "trle.c"
 #include "zrle.c"
 #undef BPP
 #define BPP 16
@@ -2320,7 +2381,10 @@ HandleRFBServerMessage(rfbClient* client)
 #include "ultra.c"
 #include "zlib.c"
 #include "tight.c"
+#include "trle.c"
 #include "zrle.c"
+#define REALBPP 15
+#include "trle.c"
 #define REALBPP 15
 #include "zrle.c"
 #undef BPP
@@ -2331,12 +2395,21 @@ HandleRFBServerMessage(rfbClient* client)
 #include "ultra.c"
 #include "zlib.c"
 #include "tight.c"
+#include "trle.c"
 #include "zrle.c"
+#define REALBPP 24
+#include "trle.c"
 #define REALBPP 24
 #include "zrle.c"
 #define REALBPP 24
 #define UNCOMP 8
+#include "trle.c"
+#define REALBPP 24
+#define UNCOMP 8
 #include "zrle.c"
+#define REALBPP 24
+#define UNCOMP -8
+#include "trle.c"
 #define REALBPP 24
 #define UNCOMP -8
 #include "zrle.c"

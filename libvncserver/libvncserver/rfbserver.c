@@ -2065,7 +2065,11 @@ rfbBool rfbProcessFileTransfer(rfbClientPtr cl, uint8_t contentType, uint8_t con
         /* If the file exists... We can send a rfbFileChecksums back to the client before we send an rfbFileAcceptHeader */
         /* TODO: Delta Transfer */
 
+#ifdef __OS2__
+        cl->fileTransfer.fd=open(filename1, O_CREAT|O_WRONLY|O_TRUNC|O_BINARY, 0744);
+#else
         cl->fileTransfer.fd=open(filename1, O_CREAT|O_WRONLY|O_TRUNC, 0744);
+#endif
         if (DB) rfbLog("rfbProcessFileTransfer() rfbFileTransferOffer(\"%s\"->\"%s\") %s %s fd=%d\n", buffer, filename1, (cl->fileTransfer.fd==-1?"Failed":"Success"), (cl->fileTransfer.fd==-1?strerror(errno):""), cl->fileTransfer.fd);
         /*
         */
@@ -2273,11 +2277,6 @@ rfbProcessClientNormalMessage(rfbClientPtr cl)
     uint32_t lastPreferredEncoding = -1;
     char encBuf[64];
     char encBuf2[64];
-
-#ifdef LIBVNCSERVER_WITH_WEBSOCKETS
-    if (cl->wsctx && webSocketCheckDisconnect(cl))
-      return;
-#endif
 
     if ((n = rfbReadExact(cl, (char *)&msg, 1)) <= 0) {
         if (n != 0)

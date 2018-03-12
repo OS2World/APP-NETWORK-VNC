@@ -23,20 +23,23 @@
 #include <vnckbd.h>
 #include <debug.h>
 
-extern HAB             habSrv;            // from main.c
-extern HMQ             hmqSrv;            // from main.c
-extern HWND            hwndSrv;           // from main.c
-extern PMHINIT         pmhInit;           // from main.c
-extern PMHDONE         pmhDone;           // from main.c
-extern PMHPOSTEVENT    pmhPostEvent;      // from main.c
-extern HWND            hwndGUI;           // from gui.c
+extern HAB             habSrv;             // from main.c
+extern HMQ             hmqSrv;             // from main.c
+extern HWND            hwndSrv;            // from main.c
+extern PMHINIT         pmhInit;            // from main.c
+extern PMHDONE         pmhDone;            // from main.c
+extern PMHPOSTEVENT    pmhPostEvent;       // from main.c
+extern HWND            hwndLastUnderPtr;   // from main.c
+extern CHAR            acWinUnderPtrClass[128]; // from main.c
+extern HWND            hwndGUI;            // from gui.c
+
 
 static PSZ              pszDesktopName        = NULL;
 static rfbScreenInfoPtr prfbScreen            = NULL;
 static HPS              hpsScreen             = NULLHANDLE;
 static HPS              hpsMem                = NULLHANDLE;
 static rfbCursor        stCursor;
-static HPOINTER         hptrLastPointer;
+static HPOINTER         hptrLastPointer       = NULLHANDLE;
 static PXKBDMAP         pKbdMap               = NULL;
 static RECTL            rectlDesktop;
 static ULONG            cClients              = 0;
@@ -191,12 +194,32 @@ static VOID _progExecute(rfbClientPtr prfbClient, PSZ pszCommand,
   Returns foreground program type (PROG_FULLSCREEN, PROG_WINDOWABLEVIO,
   PROG_WINDOWEDVDM, PROG_PM, PROG_DEFAULT) or -1 on error.
 */
-static LONG _queryFrgnProgType()
+static LONG _queryProgType(HWND hwnd)
 {
   HSWITCH    hSw;
-  HWND       hwndActive = WinQueryActiveWindow( HWND_DESKTOP );
   ULONG      ulRC;
   SWCNTRL    stSwCntrl;
+
+  hSw = WinQuerySwitchHandle( hwnd, 0 );
+  if ( hSw == NULLHANDLE )
+  {
+    debug( "WinQuerySwitchHandle(%lu,0) returns NULLHANDLE", hwnd );
+    return -1;
+  }
+
+  ulRC = WinQuerySwitchEntry( hSw, &stSwCntrl );
+  if ( ulRC != NO_ERROR )
+  {
+    debug( "WinQuerySwitchEntry(), rc = %lu\n", ulRC );
+    return -1;
+  }
+
+  return stSwCntrl.bProgType;
+}
+
+static LONG _queryFrgnProgType()
+{
+  HWND       hwndActive = WinQueryActiveWindow( HWND_DESKTOP );
 
   if ( hwndActive == NULLHANDLE )
   {
@@ -204,21 +227,7 @@ static LONG _queryFrgnProgType()
     return -1;
   }
 
-  hSw = WinQuerySwitchHandle( hwndActive, 0 );
-  if ( hSw == NULLHANDLE )
-  {
-    debug( "WinQuerySwitchHandle(%u,0) returns NULLHANDLE", hwndActive );
-    return -1;
-  }
-
-  ulRC = WinQuerySwitchEntry( hSw, &stSwCntrl );
-  if ( ulRC != NO_ERROR )
-  {
-    debug( "WinQuerySwitchEntry(), rc = %u\n", ulRC );
-    return -1;
-  }
-
-  return stSwCntrl.bProgType;
+  return _queryProgType( hwndActive );
 }
 
 static BOOL _isFullscreenMode()
@@ -506,14 +515,73 @@ static enum rfbNewClientAction _cbClientNew(rfbClientPtr prfbClient)
   return RFB_CLIENT_ACCEPT;
 }
 
+static VOID _wheelEvent(LONG lX, LONG lY, BOOL fWheelUp)
+{
+// PM123 commands (for WM_COMMAND)
+#define IDM_M_VOL_RAISE     519
+#define IDM_M_VOL_LOWER     520
+
+  HWND       hwndUnderPtr;
+  RECTL      rectl;
+  CHAR       acWinUnderPtrClass[128];
+
+  rectl.xLeft    = lX;
+  rectl.yBottom  = lY;
+  hwndUnderPtr = WinWindowFromPoint( HWND_DESKTOP, (PPOINTL)&rectl, TRUE );
+
+  if ( WinQueryClassName( hwndUnderPtr, sizeof(acWinUnderPtrClass),
+                          acWinUnderPtrClass ) == 0 )
+    return;
+
+  if ( strcmp( acWinUnderPtrClass, "PM123" ) == 0 )
+    WinSendMsg( hwndUnderPtr, WM_COMMAND,
+                MPFROMSHORT(fWheelUp ? IDM_M_VOL_RAISE : IDM_M_VOL_LOWER),
+                MPFROM2SHORT(CMDSRC_OTHER,TRUE) );
+  else
+  {
+    ULONG    ulMsg      = WM_CHAR;
+    UCHAR    uchScan    = fWheelUp ? 0x48 : 0x50;
+    USHORT   usChar     = fWheelUp ? 0x4800 : 0x5000;
+    USHORT   usVK       = fWheelUp ? VK_UP : VK_DOWN;
+    MPARAM   mp1up, mp2up, mp1down, mp2down;
+
+    mp1down = MPFROMSH2CH( KC_SCANCODE | KC_VIRTUALKEY, 1, uchScan );
+    mp2down = MPFROM2SHORT( usChar, usVK );
+    mp1up   = MPFROMSH2CH( KC_SCANCODE | KC_VIRTUALKEY | KC_KEYUP | KC_PREVDOWN
+                           , 1, uchScan );
+    mp2up   = mp2down;
+
+/*
+    Future: разобраться почему в ВИО не шлёт.
+
+    if ( strcmp( acWinUnderPtrClass, "Shield" ) == 0 )
+    {
+      //hwndUnderPtr = WinQueryWindow( hwndUnderPtr, QW_PARENT );
+
+      // Target program in VIO mode - prepare mp2 for WM_VIOCHAR.
+      ulMsg = WM_VIOCHAR;
+      xkMakeMPForVIO( mp1down, &mp2down );
+      xkMakeMPForVIO( mp1up, &mp2up );
+    }
+*/
+
+    WinPostMsg( hwndUnderPtr, ulMsg, mp1down, mp2down );
+    WinPostMsg( hwndUnderPtr, ulMsg, mp1up, mp2up );
+  }
+
+  WinQueryWindowRect( hwndUnderPtr, &rectl );
+  WinMapWindowPoints( hwndUnderPtr, HWND_DESKTOP, (PPOINTL)&rectl, 2 );
+  rfbsUpdateScreen( rectl );
+}
+
 static void _cbPtrEvent(int buttonMask, int x, int y, rfbClientPtr prfbClient)
 {
   PCLIENTDATA          pClientData = (PCLIENTDATA)prfbClient->clientData;
   ULONG                ulVal;
   ULONG                ulMsg = 0;
-  SHORT                sY;
+  SHORT                sY = prfbScreen->height - y - 1;
 
-  WinSetPointerPos( HWND_DESKTOP, x, prfbScreen->height - y - 1 );
+  WinSetPointerPos( HWND_DESKTOP, x, sY );
 
   if ( pClientData->ulBtnFlags == buttonMask )
     return;
@@ -529,6 +597,22 @@ static void _cbPtrEvent(int buttonMask, int x, int y, rfbClientPtr prfbClient)
   ulVal = buttonMask & rfbButton3Mask;
   if ( ulVal != (pClientData->ulBtnFlags & rfbButton3Mask) )
     ulMsg = ulVal != 0 ? WM_BUTTON2DOWN : WM_BUTTON2UP;
+
+  ulVal = buttonMask & rfbButton4Mask;
+  if ( ulVal != (pClientData->ulBtnFlags & rfbButton4Mask) )
+  {
+    // Wheel: Up
+    _wheelEvent( x, sY, TRUE );
+    return;
+  }
+
+  ulVal = buttonMask & rfbButton5Mask;
+  if ( ulVal != (pClientData->ulBtnFlags & rfbButton5Mask) )
+  {
+    // Wheel: Down
+    _wheelEvent( x, sY, FALSE );
+    return;
+  }
 
   switch( ulMsg )
   {
@@ -633,7 +717,6 @@ static void _cbKeyEvent(rfbBool down, rfbKeySym key, rfbClientPtr prfbClient)
   LONG                 lProgType;
 
   // Switch to the desktop (_JTDT_ANY - only when full-screen is current mode).
-debugPCP( "call _jumpToDesktop()" );
   _jumpToDesktop( _JTDT_ANY );
 
   if ( pKbdMap == NULL )
@@ -797,6 +880,7 @@ debugPCP( "call _jumpToDesktop()" );
               stEvent.acFlags, stEvent.acScan, SHORT1FROMMP(mp2), stEvent.acVK ); }*/
 
     // Post event over hook.
+printf( "- %lu %lu %lu\n", ulMsg, mp1, mp2 );
     pmhPostEvent( habSrv, ulMsg, mp1, mp2 );
   } // for()
 }
@@ -944,7 +1028,7 @@ static HPS _memPSCreate(ULONG ulCX, ULONG ulCY, ULONG ulBPP, PRGB2 paPalette)
   HPS                  hpsMem;
   HBITMAP              hbmMem;
   PBITMAPINFOHEADER2   pbmih;
-  PBITMAPINFO2         pbmi = NULL;
+  ULONG                ulOptions;
   ULONG                cbPalette = ulBPP == 1 ? (sizeof(RGB2) << 1)
                                               : ulBPP == 8
                                                 ? (sizeof(RGB2) << 8) : 0;
@@ -952,10 +1036,12 @@ static HPS _memPSCreate(ULONG ulCX, ULONG ulCY, ULONG ulBPP, PRGB2 paPalette)
   hdcMem = DevOpenDC( habSrv, OD_MEMORY, "*", 0, NULL, NULLHANDLE );
 
   // Create a new memory presentation space.
-  size.cx = ulCX;
-  size.cy = ulCY;
-  hpsMem = GpiCreatePS( habSrv, hdcMem, &size,
-                        PU_PELS | GPIF_DEFAULT | GPIT_MICRO | GPIA_ASSOC );
+  hpsMem = WinGetScreenPS( HWND_DESKTOP );
+  ulOptions = GpiQueryPS( hpsMem, &size );
+  WinReleasePS( hpsMem );
+  size.cx = 0;
+  size.cy = 0;
+  hpsMem = GpiCreatePS( habSrv, hdcMem, &size, ulOptions | GPIA_ASSOC );
   if ( hpsMem == NULLHANDLE )
   {
     debug( "GpiCreatePS() failed. Memory PS was not created." );
@@ -975,14 +1061,14 @@ static HPS _memPSCreate(ULONG ulCX, ULONG ulCY, ULONG ulBPP, PRGB2 paPalette)
   // Create a system bitmap object
   memset( pbmih, 0, sizeof(BITMAPINFOHEADER2) );
   pbmih->cbFix           = sizeof(BITMAPINFOHEADER2);
-  pbmih->cx              = size.cx;
-  pbmih->cy              = size.cy;
+  pbmih->cx              = ulCX;
+  pbmih->cy              = ulCY;
   pbmih->cPlanes         = 1;
   pbmih->cBitCount       = ulBPP;
   if ( paPalette != NULL )
     memcpy( &((PBYTE)pbmih)[sizeof(BITMAPINFO2)], paPalette, cbPalette );
 
-  hbmMem = GpiCreateBitmap( hpsMem, pbmih, 0, NULL, pbmi );
+  hbmMem = GpiCreateBitmap( hpsMem, pbmih, 0, NULL, NULL );
   if ( ( hbmMem == GPI_ERROR ) || ( hbmMem == NULLHANDLE ) )
   {
     debug( "GpiCreateBitmap() failed" );

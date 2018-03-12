@@ -11,7 +11,7 @@ NAME = vncserver
 # Binary file extension (dll/exe)
 EXT = exe
 
-VERSION = 0.1.2
+VERSION = 0.1.5
 DESCRIPTION = VNC Server
 
 # Compilation flags for ../common/utils.c

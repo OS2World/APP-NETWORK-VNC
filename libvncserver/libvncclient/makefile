@@ -1,7 +1,7 @@
 LIB = ../vncclient.a
 
 SRCS = tls_openssl.c cursor.c listen.c rfbproto.c sockets.c vncviewer.c \
-       ../common/minilzo.c
+       ../common/minilzo.c ../common/turbojpeg.c
 
 OBJS = $(SRCS:.c=.o)
 
@@ -22,7 +22,7 @@ DEFS += -D_DIGI -D_DIGI_NO_TCP_NODELAY
 # LANs, but can degrade performance on WANs. 
 #
 
-CFLAGS = -I.. -I../common $(DEFS)
+CFLAGS = -I.. -I../common $(DEFS) -march=pentium -pipe -O3
 
 $(LIB): $(OBJS)
 	$(AR) rc $(LIB) $(OBJS)

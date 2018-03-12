@@ -306,25 +306,40 @@ SOM_Scope BOOL  SOMLINK VNCV_wpModifyPopupMenu(vncv *somSelf,
                                                HWND hwndCnr, 
                                                ULONG iPosition)
 {
-//    vncvData *somThis = vncvGetData( somSelf );
-    vncvMethodDebug("vncv","VNCV_wpModifyPopupMenu");
+  vncvData   *somThis = vncvGetData( somSelf );
+  HMODULE    hModule = wpsutilGetModuleHandle();
 
-    return (vncv_parent_WPAbstract_wpModifyPopupMenu(somSelf, 
-                                                     hwndMenu, 
-                                                     hwndCnr, 
-                                                     iPosition));
+  _wpInsertPopupMenuItems( somSelf, hwndMenu, iPosition, hModule, IDMNU_VNCV,
+                           0 );
+  WinSendMsg( hwndMenu, MM_SETITEMATTR, MPFROM2SHORT( IDMI_DYNICON_ON, TRUE ),
+              MPFROM2SHORT( MIA_CHECKED, _fDynamicIcon ? MIA_CHECKED : 0 ) );
+  WinSendMsg( hwndMenu, MM_SETITEMATTR, MPFROM2SHORT( IDMI_DYNICON_OFF, TRUE ),
+              MPFROM2SHORT( MIA_CHECKED, _fDynamicIcon ? 0 : MIA_CHECKED ) );
+
+  return vncv_parent_WPAbstract_wpModifyPopupMenu( somSelf, hwndMenu, 
+                                                   hwndCnr, iPosition );
 }
 
 SOM_Scope BOOL  SOMLINK VNCV_wpMenuItemSelected(vncv *somSelf, 
                                                 HWND hwndFrame, 
                                                 ULONG ulMenuId)
 {
-//    vncvData *somThis = vncvGetData( somSelf );
-    vncvMethodDebug("vncv","VNCV_wpMenuItemSelected");
+//  vncvData   *somThis = vncvGetData( somSelf );
 
-    return (vncv_parent_WPAbstract_wpMenuItemSelected(somSelf, 
-                                                      hwndFrame, 
-                                                      ulMenuId));
+  switch( ulMenuId )
+  {
+    case IDMI_DYNICON_ON:
+      _vncvSetDynamicIcon( somSelf, TRUE );
+      return TRUE;
+
+    case IDMI_DYNICON_OFF:
+      _vncvSetDynamicIcon( somSelf, FALSE );
+      return TRUE;
+  }
+    
+
+  return vncv_parent_WPAbstract_wpMenuItemSelected( somSelf, hwndFrame, 
+                                                    ulMenuId );
 }
 
 SOM_Scope BOOL  SOMLINK VNCV_wpSetIconData(vncv *somSelf, PICONINFO pIconInfo)

@@ -16,7 +16,7 @@ DLLFILE = ..\bin\vncv.dll
 LNKFILE = vncv.lnk
 
 # Uncomment next line to make debug version
-# DEBUGCODE = YES
+DEBUGCODE = YES
 
 
 INCPATH = ..\common;$(%WATCOM)\H\OS2;$(%WATCOM)\H;D:\dev\OS2TK45\som\include;
