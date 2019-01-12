@@ -16,7 +16,7 @@ DLLFILE = ..\bin\vncv.dll
 LNKFILE = vncv.lnk
 
 # Uncomment next line to make debug version
-DEBUGCODE = YES
+# DEBUGCODE = YES
 
 
 INCPATH = ..\common;$(%WATCOM)\H\OS2;$(%WATCOM)\H;D:\dev\OS2TK45\som\include;
@@ -108,7 +108,7 @@ $(LNKFILE): .ALWAYS
   @%append $@ OPTION QUIET
   @%append $@ OPTION OSNAME='OS/2 and eComStation'
 !ifdef %unixroot
-  @$(%unixroot)\usr\libexec\bin\date.exe +"OPTION DESCRIPTION '@$#$(AUTOR):$(VERSION)$#@$#$#1$#$# %F %T      $(%HOSTNAME)::ru:RUS:::@@$(COMMENT)'" >>$^@
+  @$(%unixroot)\usr\libexec\bin\date.exe +"OPTION DESCRIPTION '@$#$(AUTOR):$(VERSION)$#@$#$#1$#$# %F %T      $(%HOSTNAME)::ru:RU:::@@$(COMMENT)'" >>$^@
 !else
   @%append $@ OPTION DESCRIPTION '@$#$(AUTOR):$(VERSION)$#@$#$#1$#$#                          $(%HOSTNAME)::ru:RUS:0::@@$(COMMENT)'
 !endif

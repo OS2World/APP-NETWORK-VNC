@@ -28,7 +28,7 @@ ifeq ($(EXT),dll)
 LDFLAGS += -Zdll -Zmtd
 endif
 
-LDFLAGS += -Zomf $(OBJS) $(LIBS) -o $(FILE_BIN)
+LDFLAGS += -Zomf -Zhigh-mem $(OBJS) $(LIBS) -o $(FILE_BIN)
 # -Zlinker option -Zlinker eliminate
 
 
