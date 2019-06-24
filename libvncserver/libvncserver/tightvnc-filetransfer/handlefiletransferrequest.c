@@ -47,6 +47,7 @@
 #include "filetransfermsg.h"
 #include "handlefiletransferrequest.h"
 
+
 #ifdef _DIGI
 #define pthread_create(a,b,c,d) 0
 #define pthread_mutex_lock(a)
@@ -497,12 +498,6 @@ RunFileDownloadThread(void* client)
 			if(rfbWriteExact(cl, fileDownloadMsg.data, fileDownloadMsg.length) < 0)  {
 				rfbLog("File [%s]: Method [%s]: Error while writing to socket \n"
 						, __FILE__, __FUNCTION__);
-
-				if(cl != NULL) {
-			    	rfbCloseClient(cl);
-				CloseUndoneFileTransfer(cl, rtcp);
-				}
-				
 				FreeFileTransferMsg(fileDownloadMsg);
 				return NULL;
 			}
@@ -516,7 +511,6 @@ RunFileDownloadThread(void* client)
 void
 HandleFileDownload(rfbClientPtr cl, rfbTightClientPtr rtcp)
 {
-	pthread_t fileDownloadThread;
 	FileTransferMsg fileDownloadMsg;
 	
 	memset(&fileDownloadMsg, 0, sizeof(FileTransferMsg));
@@ -526,10 +520,9 @@ HandleFileDownload(rfbClientPtr cl, rfbTightClientPtr rtcp)
 		FreeFileTransferMsg(fileDownloadMsg);
 		return;
 	}
-	rtcp->rcft.rcfd.downloadInProgress = FALSE;
-	rtcp->rcft.rcfd.downloadFD = -1;
+	CloseUndoneFileDownload(cl, rtcp);
 
-	if(pthread_create(&fileDownloadThread, NULL, RunFileDownloadThread, (void*) 
+	if(pthread_create(&rtcp->rcft.rcfd.downloadThread, NULL, RunFileDownloadThread, (void*)
 	cl) != 0) {
 		FileTransferMsg ftm = GetFileDownLoadErrMsg();
 		
@@ -593,13 +586,15 @@ HandleFileDownloadCancelRequest(rfbClientPtr cl, rfbTightClientPtr rtcp)
 					"FileDownloadCancelMsg\n", __FILE__, __FUNCTION__);
 		
 	    rfbCloseClient(cl);
+	    free(reason);
+	    return;
 	}
 
 	rfbLog("File [%s]: Method [%s]: File Download Cancel Request received:"
 					" reason <%s>\n", __FILE__, __FUNCTION__, reason);
 	
 	pthread_mutex_lock(&fileDownloadMutex);
-	CloseUndoneFileTransfer(cl, rtcp);
+	CloseUndoneFileDownload(cl, rtcp);
 	pthread_mutex_unlock(&fileDownloadMutex);
 	
 	if(reason != NULL) {
@@ -842,7 +837,7 @@ HandleFileUploadDataRequest(rfbClientPtr cl, rfbTightClientPtr rtcp)
 			FreeFileTransferMsg(ftm);
 		}
 
-		CloseUndoneFileTransfer(cl, rtcp);
+		CloseUndoneFileUpload(cl, rtcp);
 
 	    if(pBuf != NULL) {
 	    	free(pBuf);
@@ -942,7 +937,7 @@ HandleFileUploadFailedRequest(rfbClientPtr cl, rfbTightClientPtr rtcp)
 	rfbLog("File [%s]: Method [%s]: File Upload Failed Request received:"
 				" reason <%s>\n", __FILE__, __FUNCTION__, reason);
 
-	CloseUndoneFileTransfer(cl, rtcp);
+	CloseUndoneFileUpload(cl, rtcp);
 
 	if(reason != NULL) {
 		free(reason);

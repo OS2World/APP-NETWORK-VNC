@@ -1,0 +1,55 @@
+System tray widget for XCenter/eCenter ver. 0.3
+
+Note: This version incomplete, and have limitations - no settings dialog,
+      changed font and colors not saved.
+
+      
+  Installation:
+  
+    Copy systray.dll and systrayd.exe into
+    <XWorkplace installation folder>\plugins\xcenter\
+    Close, and then re-open XCenter. SysTray widget should be appear
+    in widget list as "System tray and clock".
+    
+    If you are upgrading from previous version, close XCenter,
+    replace systray.dll with new version, and run XCenter again.
+    Replacing systrayd.exe not needed, it leaves unchanged.
+  
+    
+  Description:
+  
+    System tray widget for XCenter - it's port of System tray plugin
+    included in SysTray/WPS to XCenter. (XCenter is a part of XWorkplace.)
+    System tray widget for XCenter based on source code of SysTray/WPS.
+    SysTray/WPS was developed by Dmitry Zaharov <systray@os2.ru>.
+    System tray is a bar with icons which added by thrid-party applications
+    using SysTray API. Applications will get messages from user actions
+    on tray icons.
+  
+    
+  Hidden feature:
+  
+    Experimental feature for showing keyboard layout in system tray. You need
+    to add SET SYSTRAY_LANGVIEW_LATIN and SET SYSTRAY_LANGVIEW_NATIONAL
+    settings into CONFIG.SYS with values referring to icons for 
+    national/default keyboard layout images.  Example:
+    SET SYSTRAY_LANGVIEW_LATIN=c:\os2\default.ico
+    SET SYSTRAY_LANGVIEW_NATIONAL=c:\os2\national.ico
+    Do not open Language Viewer from System Setup folder - it will cause total
+    functionality lost of system tray keyboard layout viewer until reboot.
+	For icons, see folder "lang_ico" which contain icons that I use.
+
+	
+  History:
+  
+    v0.3: Prevent XCenter from pop-up (if hidden) when applications
+          refresh tray icons.
+    
+    v0.2: Fixed some interface glitches.
+    
+    v0.1: Initial release.
+      
+
+Eugene Romanenko. <eros2@os2.ru>.
+http://eros2.by.ru
+IRC: ErOs2 on #os2russian in EFNet network. 

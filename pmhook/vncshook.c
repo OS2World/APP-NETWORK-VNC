@@ -120,11 +120,11 @@ static VOID _updateMessage(HWND hwnd, RECTL *pRect)
 #endif
 }
 
-static VOID _windowChanged(HWND hwnd)
+static VOID _windowChanged(HWND hwnd, BOOL fVisibleCheck)
 {
   RECTL      rectlWin;
 
-  if ( !WinIsWindowVisible( hwnd ) ||
+  if ( ( fVisibleCheck && !WinIsWindowVisible( hwnd ) ) ||
        !WinQueryWindowRect( hwnd, &rectlWin ) ||
        !WinMapWindowPoints( hwnd, HWND_DESKTOP, (PPOINTL)&rectlWin, 2 ) )
     return;
@@ -140,7 +140,7 @@ static VOID _windowPaint(HWND hwnd)
        WinMapWindowPoints( hwnd, HWND_DESKTOP, (PPOINTL)&rectlWin, 2 ) )
     _updateMessage( hwnd, &rectlWin );
   else
-    _windowChanged( hwnd );
+    _windowChanged( hwnd, TRUE );
 }
 
 // Monitor messages that the system does not post to a queue (while processing
@@ -158,9 +158,13 @@ PMHEXPORT VOID EXPENTRY pmhSendMsgHookProc(HAB hab, PSMHSTRUCT psmh,
     case WM_ENABLE:
     case WM_REALIZEPALETTE:
     case WM_SETWINDOWPARAMS:
-    case WM_WINDOWPOSCHANGED:
     case WM_MENUEND:
-      _windowChanged( psmh->hwnd );
+      _windowChanged( psmh->hwnd, TRUE );
+      break;
+
+    case WM_WINDOWPOSCHANGED:
+      _windowChanged( psmh->hwnd,
+                      (((PSWP)psmh->mp1)->fl & (SWP_HIDE | SWP_MINIMIZE)) == 0 );
       break;
 
     case WM_PAINT:
@@ -169,7 +173,7 @@ PMHEXPORT VOID EXPENTRY pmhSendMsgHookProc(HAB hab, PSMHSTRUCT psmh,
 
     case WM_MENUSELECT:
       if ( (HWND)psmh->mp2 != NULLHANDLE )
-        _windowChanged( (HWND)psmh->mp2 );
+        _windowChanged( (HWND)psmh->mp2, TRUE );
   }
 }
 
@@ -199,14 +203,14 @@ PMHEXPORT BOOL EXPENTRY pmhInputHookProc(HAB hab, PQMSG pqmsg, ULONG ulOption)
 //    case WM_USER:      // [eros2] handle xCenter pulse widget update
     case WM_TIMER:     // [eros2] Note: may cause high CPU load
     case CM_SCROLLWINDOW:        // In container.
-      _windowChanged( pqmsg->hwnd );
+      _windowChanged( pqmsg->hwnd, TRUE );
       break;
 
     case WM_HSCROLL:
     case WM_VSCROLL:
       if ( ( SHORT2FROMMP(pqmsg->mp2) == SB_SLIDERPOSITION ) ||
            ( SHORT2FROMMP(pqmsg->mp2) == SB_ENDSCROLL ) )
-        _windowChanged( pqmsg->hwnd );
+        _windowChanged( pqmsg->hwnd, TRUE );
       break;
 
     case WM_PAINT:

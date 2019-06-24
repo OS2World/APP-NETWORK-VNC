@@ -1663,7 +1663,8 @@ VOID ccSendMouseEvent(PCLNTCONN pCC, LONG lX, LONG lY, ULONG ulButton)
         case RFBBUTTON_RIGHT:      iRFBButton = rfbButton3Mask; break;
         case RFBBUTTON_MIDDLE:     iRFBButton = rfbButton2Mask; break;
         case RFBBUTTON_WHEEL_DOWN: iRFBButton = rfbButton5Mask; break;
-        case RFBBUTTON_WHEEL_UP:   iRFBButton = rfbButton4Mask; break;
+//        case RFBBUTTON_WHEEL_UP:
+        default:                   iRFBButton = rfbButton4Mask; break;
       }
 
       if ( (ulButton & RFBBUTTON_PRESSED) != 0 )

@@ -35,7 +35,7 @@ extern HAB             hab;
 
 // All available encodings, see ibvncclient\rfbproto.c, SetFormatAndEncodings().
 static PSZ             pszEncodings =
-        "RAW CopyRect Tight Hextile Zlib ZlibHex ZRLE ZYWRLE Ultra CoRRE RRE";
+    "RAW CopyRect Tight Hextile Zlib ZlibHex ZRLE TRLE ZYWRLE Ultra CoRRE RRE";
 
 static PFNWP           fnOldLBProc;
 

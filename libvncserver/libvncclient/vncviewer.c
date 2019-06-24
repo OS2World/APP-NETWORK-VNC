@@ -491,6 +491,7 @@ rfbBool rfbInitClient(rfbClient* client,int* argc,char** argv) {
 	  client->serverHost = strdup(argv[i]);
 	}
 #ifdef _DIGI
+        // Accept values 0..9 as "display", otherwise - port number.
 	if(client->serverPort >= 0 && client->serverPort <= 9)
 #else
 	if(client->serverPort >= 0 && client->serverPort < 5900)
@@ -534,6 +535,12 @@ void rfbClientCleanup(rfbClient* client) {
   }
 #endif
 #endif
+
+  if (client->ultra_buffer)
+    free(client->ultra_buffer);
+
+  if (client->raw_buffer)
+    free(client->raw_buffer);
 
   FreeTLS(client);
 

@@ -13,20 +13,24 @@
 #define IDS_UNDO                     0
 #define IDS_DEFAULT                  1
 #define IDS_GENERAL                  2
-#define IDS_ACCESS                   3
-#define IDS_OPTIONS                  4
-#define IDS_KEYBOARD                 5
-#define IDS_LOGGING                  6
-#define IDS_PROGRAMS                 7
-#define IDS_SOURCE                   8
-#define IDS_COMMENT                  9
-#define IDS_ALLOW                   10
-#define IDS_DENY                    11
-#define IDS_CLIENTS                 12
-#define IDS_HOST                    13
-#define IDS_TIME                    14
-#define IDS_VERSION                 15
-#define IDS_STATE                   16
+#define IDS_WEBSOCKETS               3
+#define IDS_ACCESS                   4
+#define IDS_OPTIONS                  5
+#define IDS_KEYBOARD                 6
+#define IDS_LOGGING                  7
+#define IDS_PROGRAMS                 8
+#define IDS_NBPAGE                   9
+#define IDS_SOURCE                  10
+#define IDS_COMMENT                 11
+#define IDS_ALLOW                   12
+#define IDS_DENY                    13
+#define IDS_CLIENTS                 14
+#define IDS_HOST                    15
+#define IDS_TIME                    16
+#define IDS_VERSION                 17
+#define IDS_STATE                   18
+#define IDS_CERTFILEDLG             19
+#define IDS_KEYFILEDLG              20
 
 #define IDMSG_USER_CHAT_OPEN        0
 #define IDMSG_USER_CHAT_LEFT        1
@@ -74,6 +78,12 @@
 #define IDSB_PORT                   1106
 #define IDSB_HTTP_PORT              1107
 
+#define IDDLG_PAGE_WEBSOCKETS       1150
+#define IDEF_SSLCERTFILE            1151
+#define IDPB_SSLCERTFILE            1152
+#define IDEF_SSLKEYFILE             1153
+#define IDPB_SSLKEYFILE             1154
+
 #define IDDLG_PAGE_ACCESS           1200
 #define IDCN_ACL                    1201
 #define IDPB_ACL_NEW                1202
@@ -87,17 +97,15 @@
 #define IDRB_NEVERSHARED_DONTDISCON 1210
 
 #define IDDLG_PAGE_OPTIONS          1300
-#define IDSB_DEFUPDTIME             1301
-#define IDSB_DEFPTRUPDTIME          1302
-#define IDSB_SLICEHEIGHT            1303
-#define IDCB_FILETRANSFER           1304
-#define IDCB_ULTRAVNC               1305
-#define IDCB_HTTPPROXY              1306
-#define IDCB_GUIVISIBLE             1307
-
-#define IDDLG_PAGE_KBD              1400
-#define IDCB_DRIVER_VNCKBD          1401
-#define IDCB_DRIVER_KBD             1402
+#define IDCB_DRIVER_VNCKBD          1301
+#define IDCB_DRIVER_KBD             1302
+#define IDSB_DEFUPDTIME             1303
+#define IDSB_DEFPTRUPDTIME          1304
+#define IDSB_SLICEHEIGHT            1305
+#define IDCB_FILETRANSFER           1306
+#define IDCB_ULTRAVNC               1307
+#define IDCB_HTTPPROXY              1308
+#define IDCB_GUIVISIBLE             1309
 
 #define IDDLG_PAGE_LOG              1500
 #define IDEF_LOG_FILE               1501

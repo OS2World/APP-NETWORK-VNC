@@ -19,7 +19,6 @@
 #define ws_dbg(fmt, ...)
 #endif
 
-
 static inline int
 isControlFrame(ws_ctx_t *wsctx)
 {

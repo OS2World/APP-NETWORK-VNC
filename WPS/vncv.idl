@@ -14,12 +14,12 @@ interface vncv : WPAbstract
    const BOOL  DEF_REMEMBER_PSWD  = FALSE;
    const BOOL  DEF_VIEW_ONLY      = FALSE;
    const BOOL  DEF_SHARE_DESKTOP  = TRUE;
-   const PSZ   DEF_ENCODINGS      = "Tight ZRLE Ultra CopyRect Hextile Zlib CoRRE RRE RAW";
+   const PSZ   DEF_ENCODINGS      = "Tight TRLE ZRLE Ultra CopyRect Hextile Zlib ZlibHex CoRRE RRE RAW";
    const ULONG DEF_COMPRESS_LEVEL = 5;
    const ULONG DEF_QUALITY_LEVEL  = 6;
    const BOOL  DEF_DYNAMIC_ICON   = TRUE;
 
-   const PSZ   ALL_ENCODINGS      = "RAW CopyRect Tight Hextile Zlib ZlibHex ZRLE ZYWRLE Ultra CoRRE RRE";
+   const PSZ   ALL_ENCODINGS      = "RAW CopyRect Tight Hextile Zlib ZlibHex TRLE ZRLE ZYWRLE Ultra CoRRE RRE";
 
    VOID vncvInsertSettingsPages(in HWND hwndDlg);
    VOID vncvSetDynamicIcon(in BOOL fEnable);
@@ -56,7 +56,7 @@ interface vncv : WPAbstract
       CHAR           acCharset[32];
       // Charset encoding for file-exchange and chat.
       PSZ            pszEncodings;
-      // Encodings: "RAW COPYRECT TIGHT HEXTILE ZLIB ZLIBHEX ZRLE ZYWRLE
+      // Encodings: "RAW COPYRECT TIGHT HEXTILE ZLIB ZLIBHEX ZRLE TRLE ZYWRLE
       // ULTRA CORRE RRE". First specified encoding is most prfered.
       ULONG          ulCompressLevel;
       // Compress level for encodings: TIGHT, ZLIB and ZLIBHEX (0..9).

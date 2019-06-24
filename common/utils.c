@@ -1,3 +1,4 @@
+#include <malloc.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h> 
@@ -7,6 +8,7 @@
 #define INCL_DOSERRORS
 #define INCL_WIN
 #define INCL_GPIBITMAPS
+#define INCL_DOSMISC
 #include <os2.h>
 
 #ifdef __WATCOMC__
@@ -946,6 +948,71 @@ PCHAR utilStrLastChar(ULONG cbText, PCHAR pcText, CHAR chSearch)
   }
 
   return pcScan;
+}
+
+// ULONG utilLoadInsertStr(HMODULE hMod, BOOL fStrMsg, ULONG ulId,
+//                         ULONG cVal, PSZ *ppszVal, ULONG cbBuf, PCHAR pcBuf)
+//
+// Loads string ulId from resource (string table or message table) and inserts
+// variable text-string information from the array ppszVal.
+// pcBuf - The address where function returns the requested string.
+// cbBuf - The length, in bytes, of the buffer.
+// Returns actual length, in bytes, of the string in pcBuf or 0 on error.
+
+ULONG utilLoadInsertStr(HMODULE hMod,		// module handle
+                        BOOL fStrMsg, 		// string (1) / message (0)
+                        ULONG ulId,		// string/message id
+                        ULONG cVal, PSZ *ppszVal,// count and pointers to values
+                        ULONG cbBuf, PCHAR pcBuf)// result buffer
+{
+  ULONG		ulLen;
+  PSZ		pszTemp;
+  ULONG		ulRC = NO_ERROR;
+  HAB           hab = WinQueryAnchorBlock( HWND_DESKTOP );
+
+  if ( cVal == 0 )
+    pszTemp = (PSZ)pcBuf;
+  else
+  {
+    pszTemp = alloca( cbBuf );
+  }
+
+  if ( fStrMsg )
+    ulLen = WinLoadString( hab, hMod, ulId, cbBuf, pszTemp );
+  else
+    ulLen = WinLoadMessage( hab, hMod, ulId, cbBuf, pszTemp );
+
+  if ( cVal != 0 )
+  {
+    PCHAR    apcVal[9];
+    ULONG    ulIdx, cbVal;
+
+    if ( cVal > 9 )
+      cVal = 9;
+
+    // Ensure to use low memory for DosInsertMessage() arguments.
+    for( ulIdx = 0; ulIdx < cVal; ulIdx++ )
+    {
+      if ( !IS_HIGH_PTR( ppszVal[ulIdx] ) )
+        apcVal[ulIdx] = (PCHAR)ppszVal[ulIdx];
+      else
+      {
+        cbVal = strlen( (char *)ppszVal[ulIdx] );
+        apcVal[ulIdx] = alloca( cbVal + 1 );
+        if ( apcVal[ulIdx] != NULL )
+          strcpy( apcVal[ulIdx], (char *)ppszVal[ulIdx] );
+      }
+    }
+
+    ulRC = DosInsertMessage( apcVal, cVal, pszTemp, ulLen, pcBuf, cbBuf - 1,
+                             &ulLen );
+    if ( ulRC != NO_ERROR )
+      debug( "DosInsertMessage(), rc = %u", ulRC );
+    else
+      pcBuf[ulLen] = '\0';
+  }
+
+  return ulRC == NO_ERROR ? ulLen : 0;
 }
 
 BOOL utilStrToInAddr(ULONG cbStr, PCHAR pcStr, struct in_addr *pInAddr)

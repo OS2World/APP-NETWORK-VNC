@@ -77,8 +77,8 @@ static MRESULT _commonPageProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
 }
 
 
-// Page 1: General
-// ---------------
+// Page: General
+// -------------
 
 static VOID _wmPageGeneralInitDlg(HWND hwnd)
 {
@@ -306,8 +306,85 @@ static MRESULT EXPENTRY _dlgPageGeneralProc(HWND hwnd, ULONG msg,
 }
 
 
-// Page 2: Access
-// ---------------
+// Page: WebSockets
+// ----------------
+
+static VOID _wmPageWebSocketsInitDlg(HWND hwnd)
+{
+}
+
+static VOID _wmPageWebSocketsReadConfig(HWND hwnd, PCONFIG pConfig)
+{
+  WinSetDlgItemText( hwnd, IDEF_SSLCERTFILE, pConfig->acSSLCertFile );
+  WinSetDlgItemText( hwnd, IDEF_SSLKEYFILE, pConfig->acSSLKeyFile );
+}
+
+static VOID _wmPageWebSocketsStoreConfig(HWND hwnd, PCONFIG pConfig)
+{
+  WinQueryDlgItemText( hwnd, IDEF_SSLCERTFILE, sizeof(pConfig->acSSLCertFile),
+                       pConfig->acSSLCertFile );
+  WinQueryDlgItemText( hwnd, IDEF_SSLKEYFILE, sizeof(pConfig->acSSLKeyFile),
+                       pConfig->acSSLKeyFile );
+}
+
+static VOID _wmPageWebSocketsCmdFind(HWND hwnd, ULONG ulTitleStrId,
+                                     ULONG ulEFId)
+{
+  FILEDLG    stFileDlg = { 0 };
+  HWND       hwndFileDlg;
+  CHAR       acTitle[128];
+
+  WinLoadString( NULLHANDLE, 0, ulTitleStrId, sizeof(acTitle), acTitle );
+
+  stFileDlg.cbSize    = sizeof(FILEDLG);
+  stFileDlg.fl        = FDS_OPEN_DIALOG | FDS_CENTER;
+  stFileDlg.pszTitle  = acTitle;
+
+  WinQueryDlgItemText( hwnd, ulEFId, sizeof(stFileDlg.szFullFile),
+                       stFileDlg.szFullFile );
+
+  hwndFileDlg = WinFileDlg( HWND_DESKTOP, hwnd, &stFileDlg );
+
+  if ( ( hwndFileDlg != NULLHANDLE ) && ( stFileDlg.lReturn == DID_OK ) )
+    WinSetDlgItemText( hwnd, ulEFId, stFileDlg.szFullFile );
+}
+
+static MRESULT EXPENTRY _dlgPageWebSocketsProc(HWND hwnd, ULONG msg,
+                                               MPARAM mp1, MPARAM mp2)
+{
+  switch( msg )
+  {
+    case WM_INITDLG:
+      _wmPageWebSocketsInitDlg( hwnd );
+
+    case WM_READ_CONFIG:
+      _wmPageWebSocketsReadConfig( hwnd, (PCONFIG)mp2 );
+      return (MRESULT)TRUE;
+
+    case WM_STORE_CONFIG:
+      _wmPageWebSocketsStoreConfig( hwnd, (PCONFIG)mp1 );
+      break;
+
+    case WM_COMMAND:
+      switch( SHORT1FROMMP( mp1 ) )
+      {
+        case IDPB_SSLCERTFILE:
+          _wmPageWebSocketsCmdFind( hwnd, IDS_CERTFILEDLG, IDEF_SSLCERTFILE );
+          return (MRESULT)TRUE;
+
+        case IDPB_SSLKEYFILE:
+          _wmPageWebSocketsCmdFind( hwnd, IDS_KEYFILEDLG, IDEF_SSLKEYFILE );
+          return (MRESULT)TRUE;
+      }
+      break;
+  }
+
+  return _commonPageProc( hwnd, msg, mp1, mp2 );
+}
+
+
+// Page: Access
+// ------------
 
 #define _ACL_ADDR_BUF_LEN        32
 
@@ -1021,8 +1098,8 @@ static MRESULT EXPENTRY _dlgPageAccessProc(HWND hwnd, ULONG msg,
 }
 
 
-// Page 3: Options
-// ---------------
+// Page: Options
+// -------------
 
 // Sends to the owner (GUI window) visible state, i.e. command CMD_GUI_VISIBLE
 // when "Enable system tray/floating icon" checkbox is checked or
@@ -1043,10 +1120,37 @@ static VOID _pageOptionsSendVisibleStatusToOwner(HWND hwnd)
 
 static VOID _wmPageOptionsInitDlg(HWND hwnd)
 {
+  static BOOL          fDriverVNCKBDChecked = FALSE;
+  static BOOL          fDriverVNCKBDAllowed = FALSE;
+  HFILE                hDriver;
+  ULONG                ulRC, ulAction;
+
+  if ( !fDriverVNCKBDChecked )
+  {
+    // Check driver VNCKBD$ only once.
+    ulRC = DosOpen( "VNCKBD$", &hDriver, &ulAction, 0, 0, FILE_OPEN,
+                    OPEN_SHARE_DENYREADWRITE | OPEN_ACCESS_READWRITE, NULL );
+    if ( ulRC == NO_ERROR )
+    {
+      fDriverVNCKBDAllowed = TRUE;         // Driver loaded.
+      DosClose( hDriver );
+    }
+    else
+      fDriverVNCKBDAllowed = FALSE;        // Driver is missing.
+
+    fDriverVNCKBDChecked = TRUE;           // Do not check any more.
+  }
+
+  WinEnableWindow( WinWindowFromID( hwnd, IDCB_DRIVER_VNCKBD ),
+                   fDriverVNCKBDAllowed );
 }
 
 static VOID _wmPageOptionsReadConfig(HWND hwnd, PCONFIG pConfig)
 {
+  WinCheckButton( hwnd, IDCB_DRIVER_VNCKBD, pConfig->fUseDriverVNCKBD ? 1 : 0 );
+  WinCheckButton( hwnd, IDCB_DRIVER_KBD, pConfig->fUseDriverKBD ? 1 : 0 );
+  WinCheckButton( hwnd, IDCB_GUIVISIBLE, pConfig->fGUIVisible ? 1 : 0 );
+
   WinSendDlgItemMsg( hwnd, IDSB_DEFUPDTIME, SPBM_SETCURRENTVALUE,
                      MPFROMLONG( pConfig->ulDeferUpdateTime ), 0 );
   WinSendDlgItemMsg( hwnd, IDSB_DEFPTRUPDTIME, SPBM_SETCURRENTVALUE,
@@ -1058,13 +1162,17 @@ static VOID _wmPageOptionsReadConfig(HWND hwnd, PCONFIG pConfig)
   WinCheckButton( hwnd, IDCB_ULTRAVNC, pConfig->fUltraVNCSupport ? 1 : 0 );
   WinCheckButton( hwnd, IDCB_HTTPPROXY, pConfig->fHTTPProxyConnect ? 1 : 0 );
 
-  WinCheckButton( hwnd, IDCB_GUIVISIBLE, pConfig->fGUIVisible ? 1 : 0 );
-
   _pageOptionsSendVisibleStatusToOwner( hwnd );
 }
 
 static VOID _wmPageOptionsStoreConfig(HWND hwnd, PCONFIG pConfig)
 {
+  pConfig->fUseDriverVNCKBD =
+                     WinQueryButtonCheckstate( hwnd, IDCB_DRIVER_VNCKBD ) == 1;
+  pConfig->fUseDriverKBD =
+                     WinQueryButtonCheckstate( hwnd, IDCB_DRIVER_KBD ) == 1;
+  pConfig->fGUIVisible = WinQueryButtonCheckstate( hwnd, IDCB_GUIVISIBLE ) == 1;
+
   WinSendDlgItemMsg( hwnd, IDSB_DEFUPDTIME, SPBM_QUERYVALUE,
                      MPFROMP( &pConfig->ulDeferUpdateTime ),
                      MPFROM2SHORT( 0, SPBQ_DONOTUPDATE ) );
@@ -1081,7 +1189,6 @@ static VOID _wmPageOptionsStoreConfig(HWND hwnd, PCONFIG pConfig)
                       WinQueryButtonCheckstate( hwnd, IDCB_ULTRAVNC ) == 1;
   pConfig->fHTTPProxyConnect =
                       WinQueryButtonCheckstate( hwnd, IDCB_HTTPPROXY ) == 1;
-  pConfig->fGUIVisible = WinQueryButtonCheckstate( hwnd, IDCB_GUIVISIBLE ) == 1;
 }
 
 static MRESULT EXPENTRY _dlgPageOptionsProc(HWND hwnd, ULONG msg,
@@ -1112,73 +1219,8 @@ static MRESULT EXPENTRY _dlgPageOptionsProc(HWND hwnd, ULONG msg,
 }
 
 
-// Page 4: Keyboard
-// ----------------
-
-static VOID _wmPageKbdInitDlg(HWND hwnd)
-{
-  static BOOL          fDriverVNCKBDChecked = FALSE;
-  static BOOL          fDriverVNCKBDAllowed = FALSE;
-  HFILE                hDriver;
-  ULONG                ulRC, ulAction;
-
-  if ( !fDriverVNCKBDChecked )
-  {
-    // Check driver VNCKBD$ only once.
-    ulRC = DosOpen( "VNCKBD$", &hDriver, &ulAction, 0, 0, FILE_OPEN,
-                    OPEN_SHARE_DENYREADWRITE | OPEN_ACCESS_READWRITE, NULL );
-    if ( ulRC == NO_ERROR )
-    {
-      fDriverVNCKBDAllowed = TRUE;         // Driver loaded.
-      DosClose( hDriver );
-    }
-    else
-      fDriverVNCKBDAllowed = FALSE;        // Driver is missing.
-
-    fDriverVNCKBDChecked = TRUE;           // Do not check any more.
-  }
-
-  WinEnableWindow( WinWindowFromID( hwnd, IDCB_DRIVER_VNCKBD ),
-                   fDriverVNCKBDAllowed );
-}
-
-static VOID _wmPageKbdReadConfig(HWND hwnd, PCONFIG pConfig)
-{
-  WinCheckButton( hwnd, IDCB_DRIVER_VNCKBD, pConfig->fUseDriverVNCKBD ? 1 : 0 );
-  WinCheckButton( hwnd, IDCB_DRIVER_KBD, pConfig->fUseDriverKBD ? 1 : 0 );
-}
-
-static VOID _wmPageKbdStoreConfig(HWND hwnd, PCONFIG pConfig)
-{
-  pConfig->fUseDriverVNCKBD =
-                     WinQueryButtonCheckstate( hwnd, IDCB_DRIVER_VNCKBD ) == 1;
-  pConfig->fUseDriverKBD =
-                     WinQueryButtonCheckstate( hwnd, IDCB_DRIVER_KBD ) == 1;
-}
-
-static MRESULT EXPENTRY _dlgPageKbdProc(HWND hwnd, ULONG msg,
-                                        MPARAM mp1, MPARAM mp2)
-{
-  switch( msg )
-  {
-    case WM_INITDLG:
-      _wmPageKbdInitDlg( hwnd );
-
-    case WM_READ_CONFIG:
-      _wmPageKbdReadConfig( hwnd, (PCONFIG)mp2 );
-      return (MRESULT)TRUE;
-
-    case WM_STORE_CONFIG:
-      _wmPageKbdStoreConfig( hwnd, (PCONFIG)mp1 );
-      break;
-  }
-
-  return _commonPageProc( hwnd, msg, mp1, mp2 );
-}
-
-
-// Page 5: Logging
-// ---------------
+// Page: Logging
+// -------------
 
 static VOID _wmPageLogInitDlg(HWND hwnd)
 {
@@ -1300,8 +1342,8 @@ static MRESULT EXPENTRY _dlgPageLogProc(HWND hwnd, ULONG msg,
 }
 
 
-// Page 6: Programs
-// ----------------
+// Page: Programs
+// --------------
 
 static VOID _wmPageProgInitDlg(HWND hwnd)
 {
@@ -1385,20 +1427,31 @@ static BOOL _wmInitDlg(HWND hwnd)
   NOTEBOOKBUTTON       aButtons[2] =
    { { acUndo,    IDPB_UNDO,    NULLHANDLE, WS_VISIBLE | WS_TABSTOP | WS_GROUP },
      { acDefault, IDPB_DEFAULT, NULLHANDLE, WS_VISIBLE } };
-  struct { ULONG ulDlgId; PFNWP pfnDlgProc; ULONG ulTitleStrId; }
-                       aPages[6] =
-   { { IDDLG_PAGE_GENERAL,  _dlgPageGeneralProc, IDS_GENERAL },
-     { IDDLG_PAGE_ACCESS,   _dlgPageAccessProc,  IDS_ACCESS  },
-     { IDDLG_PAGE_OPTIONS,  _dlgPageOptionsProc, IDS_OPTIONS },
-     { IDDLG_PAGE_KBD,      _dlgPageKbdProc,     IDS_KEYBOARD },
-     { IDDLG_PAGE_LOG,      _dlgPageLogProc,     IDS_LOGGING },
-     { IDDLG_PAGE_PROGRAMS, _dlgPageProgProc,    IDS_PROGRAMS } };
+
+  // Notebook pages list.
+  struct {
+    ULONG    ulDlgId;       // Dialog resource id.
+    PFNWP    pfnDlgProc;    // Window procedure for the page.
+    ULONG    ulTitleStrId;  // Tab text resource string id.
+    ULONG    ulPageN;       // Page N ...
+    ULONG    ulPages;       // ... from N pages (1,1 for the single major page).
+  }                    aPages[7] =
+   { { IDDLG_PAGE_GENERAL,    _dlgPageGeneralProc,    IDS_GENERAL,    1, 2 },
+     { IDDLG_PAGE_WEBSOCKETS, _dlgPageWebSocketsProc, IDS_WEBSOCKETS, 2, 2 },
+     { IDDLG_PAGE_ACCESS,     _dlgPageAccessProc,     IDS_ACCESS,     1, 1 },
+     { IDDLG_PAGE_OPTIONS,    _dlgPageOptionsProc,    IDS_OPTIONS,    1, 1 },
+     { IDDLG_PAGE_LOG,        _dlgPageLogProc,        IDS_LOGGING,    1, 1 },
+     { IDDLG_PAGE_PROGRAMS,   _dlgPageProgProc,       IDS_PROGRAMS,   1, 1 },
+     { 0, NULL, 0, FALSE } }; // Last end-of-list record.
+
   HAB                  hab = WinQueryAnchorBlock( hwnd );
   HWND                 hwndPage, hwndNB = WinWindowFromID( hwnd, IDNB_CONFIG );
   LONG                 lPageId;
-  CHAR                 acBuf[64];
+  CHAR                 acTitle[64];
   ULONG                ulIdx;
   PCONFIG              pConfig;
+  USHORT               usPageStyle;
+  BOOKPAGEINFO stBPI = { 0 };
 
   pConfig = cfgGet();
   WinSetWindowPtr( hwnd, QWL_USER, pConfig );
@@ -1411,7 +1464,11 @@ static BOOL _wmInitDlg(HWND hwnd)
 
   // Insert pages.
 
-  for( ulIdx = 0; ulIdx < 6; ulIdx++ )
+  stBPI.cb = sizeof(BOOKPAGEINFO);
+  stBPI.fl = BFA_MINORTABTEXT;
+  stBPI.pszMinorTab = acTitle;
+
+  for( ulIdx = 0; aPages[ulIdx].ulDlgId != 0; ulIdx++ )
   {
     hwndPage = WinLoadDlg( hwndNB, hwndNB, aPages[ulIdx].pfnDlgProc, NULLHANDLE,
                            aPages[ulIdx].ulDlgId, pConfig );
@@ -1422,13 +1479,47 @@ static BOOL _wmInitDlg(HWND hwnd)
     }
     WinSetWindowPtr( hwndPage, QWL_USER, pConfig );
 
+    usPageStyle = aPages[ulIdx].ulPageN <= 1 ? (BKA_MAJOR | BKA_AUTOPAGESIZE)
+                                             : (BKA_MINOR | BKA_AUTOPAGESIZE);
+    if ( aPages[ulIdx].ulPages > 1 )
+      // Text in "status line" like "Page N of N" will be shown.
+      usPageStyle |= BKA_STATUSTEXTON;
+
+    // Insert a new page to the notebook.
     lPageId = (LONG)WinSendMsg( hwndNB, BKM_INSERTPAGE, NULL,
-                      MPFROM2SHORT( BKA_AUTOPAGESIZE | BKA_MAJOR, BKA_LAST ) );
-    WinLoadString( hab, 0, aPages[ulIdx].ulTitleStrId, sizeof(acBuf), acBuf );
-    WinSendMsg( hwndNB, BKM_SETTABTEXT, MPFROMLONG( lPageId ), MPFROMP(acBuf) );
+                                MPFROM2SHORT( usPageStyle, BKA_LAST ) );
     WinSendMsg( hwndNB, BKM_SETPAGEWINDOWHWND, MPFROMLONG( lPageId ),
                 MPFROMLONG( hwndPage ) );
     WinSetOwner( hwndPage, hwndNB );
+
+    // Set tab text.
+    WinLoadString( hab, 0, aPages[ulIdx].ulTitleStrId, sizeof(acTitle), acTitle );
+    WinSendMsg( hwndNB, BKM_SETTABTEXT, MPFROMLONG( lPageId ), MPFROMP(acTitle) );
+
+    if ( (usPageStyle & BKA_STATUSTEXTON) != 0 )
+    {
+      // Set minor tab text and page number information.
+      CHAR   acPageN[16];
+      CHAR   acPages[16];
+      PSZ    apszVal[2] = { acPageN, acPages };
+
+      // Set minor page title.
+      stBPI.cbMinorTab = strlen( acTitle );
+      WinSendMsg( hwndNB, BKM_SETPAGEINFO, MPFROMLONG(lPageId),
+                  MPFROMP(&stBPI) );
+
+      ultoa( aPages[ulIdx].ulPageN, acPageN, 10 );
+      ultoa( aPages[ulIdx].ulPages, acPages, 10 );
+
+      // Load string "Page %1 of %2", substitution values.
+      if ( utilLoadInsertStr( 0, TRUE, IDS_NBPAGE, 2, apszVal,
+                              sizeof(acTitle), acTitle ) == 0 )
+        // Failed to load string - make a simply string like "n/n".
+        sprintf( acTitle, "%lu/%lu", aPages[ulIdx].ulPageN, aPages[ulIdx].ulPages );
+      // Set status line text (page number).
+      WinSendMsg( hwndNB, BKM_SETSTATUSLINETEXT, MPFROMLONG( lPageId ),
+                  MPFROMP( acTitle ) );
+    }
   }
 
   // Show dialog window.
@@ -1448,7 +1539,7 @@ static VOID _wmDestory(HWND hwnd)
   {
     ulPageId = (ULONG)WinSendMsg( hwndNB, BKM_QUERYPAGEID, MPFROMLONG(ulPageId),
                             MPFROM2SHORT( ulPageId == 0 ? BKA_FIRST : BKA_NEXT,
-                                          BKA_MAJOR ) );
+                                          0 ) );
     if ( ulPageId == 0 )
       break;
 

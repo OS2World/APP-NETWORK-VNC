@@ -43,6 +43,8 @@ typedef struct _WINDATA {
   SHORT                sVSlider;
   HPS                  hpsMicro;
   LONG                 lMouseButtonsDown;
+  POINTS               ptMouseLastPos;
+  ULONG                ulMouseLastButton;
   HWND                 hwndChat;
   HWND                 hwndFX;
   BOOL                 fVOBeforeFX;
@@ -457,6 +459,14 @@ static VOID _wmMouse(HWND hwnd, POINTS ptPos, ULONG ulButton)
 
   ptPos.x += pWinData->sHSlider;
   ptPos.y += pWinData->sVSlider;
+
+  if ( ( (ulButton & ~RFBBUTTON_PRESSED) < RFBBUTTON_WHEEL_UP ) &&
+       ( *((PULONG)&pWinData->ptMouseLastPos) == *((PULONG)&ptPos) ) &&
+       ( pWinData->ulMouseLastButton == ulButton ) )
+    return;
+
+  pWinData->ptMouseLastPos = ptPos;
+  pWinData->ulMouseLastButton = ulButton;
 
   // Restrict movement of pointer with desktop's dimension.
 

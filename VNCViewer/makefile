@@ -11,7 +11,7 @@ NAME = vncviewer
 # Binary file extension (dll/exe)
 EXT = exe
 
-VERSION = 0.1.7
+VERSION = 0.1.8
 DESCRIPTION = VNC Viewer
 
 # Compilation flags for ../common/utils.c
@@ -32,10 +32,10 @@ CFLAGS = -DLIBVNCSERVER_HAVE_LIBSSL -DLIBVNCSERVER_HAVE_LIBZ \
 include ../common/makefile.begin
 
 
-$(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES) msgBuilding
+$(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES)  ../libvncserver/vncclient.a msgBuilding
 	$(CC) $(FILE_DEF) $(LDFLAGS)
-	$(RC) $(RCLFLAGS)
 	$(LXLITE)
+	$(RC) $(RCLFLAGS)
 
 $(FILE_DEF):
 ifneq ($(DEBUGCODE),YES)

@@ -61,7 +61,11 @@
 #endif
 
 #include "sasl.h"
+#ifdef LIBVNCSERVER_HAVE_LZO
+#include <lzo/lzo1x.h>
+#else
 #include "minilzo.h"
+#endif
 #include "tls.h"
 
 #ifdef _MSC_VER
@@ -363,6 +367,7 @@ rfbBool ConnectToRFBRepeater(rfbClient* client,const char *repeaterHost, int rep
   rfbProtocolVersionMsg pv;
   int major,minor;
   char tmphost[250];
+  int tmphostlen;
 
 #ifdef LIBVNCSERVER_IPv6
   client->sock = ConnectClientToTcpAddr6(repeaterHost, repeaterPort);
@@ -398,8 +403,11 @@ rfbBool ConnectToRFBRepeater(rfbClient* client,const char *repeaterHost, int rep
 
   rfbClientLog("Connected to VNC repeater, using protocol version %d.%d\n", major, minor);
 
-  snprintf(tmphost, sizeof(tmphost), "%s:%d", destHost, destPort);
-  if (!WriteToRFBServer(client, tmphost, sizeof(tmphost)))
+  tmphostlen = snprintf(tmphost, sizeof(tmphost), "%s:%d", destHost, destPort);
+  if(tmphostlen < 0 || tmphostlen >= (int)sizeof(tmphost))
+    return FALSE; /* snprintf error or output truncated */
+
+  if (!WriteToRFBServer(client, tmphost, tmphostlen + 1))
     return FALSE;
 
   return TRUE;
@@ -408,11 +416,29 @@ rfbBool ConnectToRFBRepeater(rfbClient* client,const char *repeaterHost, int rep
 extern void rfbClientEncryptBytes(unsigned char* bytes, char* passwd);
 extern void rfbClientEncryptBytes2(unsigned char *where, const int length, unsigned char *key);
 
+static void
+ReadReason(rfbClient* client)
+{
+    uint32_t reasonLen;
+    char *reason;
+
+    if (!ReadFromRFBServer(client, (char *)&reasonLen, 4)) return;
+    reasonLen = rfbClientSwap32IfLE(reasonLen);
+    if(reasonLen > 1<<20) {
+      rfbClientLog("VNC connection failed, but sent reason length of %u exceeds limit of 1MB",(unsigned int)reasonLen);
+      return;
+    }
+    reason = malloc(reasonLen+1);
+    if (!ReadFromRFBServer(client, reason, reasonLen)) { free(reason); return; }
+    reason[reasonLen]=0;
+    rfbClientLog("VNC connection failed: %s\n",reason);
+    free(reason);
+}
+
 rfbBool
 rfbHandleAuthResult(rfbClient* client)
 {
-    uint32_t authResult=0, reasonLen=0;
-    char *reason=NULL;
+    uint32_t authResult=0;
 
     if (!ReadFromRFBServer(client, (char *)&authResult, 4)) return FALSE;
 
@@ -427,13 +453,7 @@ rfbHandleAuthResult(rfbClient* client)
       if (client->major==3 && client->minor>7)
       {
         /* we have an error following */
-        if (!ReadFromRFBServer(client, (char *)&reasonLen, 4)) return FALSE;
-        reasonLen = rfbClientSwap32IfLE(reasonLen);
-        reason = malloc(reasonLen+1);
-        if (!ReadFromRFBServer(client, reason, reasonLen)) { free(reason); return FALSE; }
-        reason[reasonLen]=0;
-        rfbClientLog("VNC connection failed: %s\n",reason);
-        free(reason);
+        ReadReason(client);
         return FALSE;
       }
       rfbClientLog("VNC authentication failed\n");
@@ -448,21 +468,6 @@ rfbHandleAuthResult(rfbClient* client)
     return FALSE;
 }
 
-static void
-ReadReason(rfbClient* client)
-{
-    uint32_t reasonLen;
-    char *reason;
-
-    /* we have an error following */
-    if (!ReadFromRFBServer(client, (char *)&reasonLen, 4)) return;
-    reasonLen = rfbClientSwap32IfLE(reasonLen);
-    reason = malloc(reasonLen+1);
-    if (!ReadFromRFBServer(client, reason, reasonLen)) { free(reason); return; }
-    reason[reasonLen]=0;
-    rfbClientLog("VNC connection failed: %s\n",reason);
-    free(reason);
-}
 
 static rfbBool
 ReadSupportedSecurityType(rfbClient* client, uint32_t *result, rfbBool subAuth)
@@ -470,9 +475,11 @@ ReadSupportedSecurityType(rfbClient* client, uint32_t *result, rfbBool subAuth)
     uint8_t count=0;
     uint8_t loop=0;
     uint8_t flag=0;
+    rfbBool extAuthHandler;
     uint8_t tAuth[256];
     char buf1[500],buf2[10];
     uint32_t authScheme;
+    rfbClientProtocolExtension* e;
 
     if (!ReadFromRFBServer(client, (char *)&count, 1)) return FALSE;
 
@@ -491,7 +498,18 @@ ReadSupportedSecurityType(rfbClient* client, uint32_t *result, rfbBool subAuth)
         if (!ReadFromRFBServer(client, (char *)&tAuth[loop], 1)) return FALSE;
         rfbClientLog("%d) Received security type %d\n", loop, tAuth[loop]);
         if (flag) continue;
+        extAuthHandler=FALSE;
+        for (e = rfbClientExtensions; e; e = e->next) {
+            if (!e->handleAuthentication) continue;
+            uint32_t const* secType;
+            for (secType = e->securityTypes; secType && *secType; secType++) {
+                if (tAuth[loop]==*secType) {
+                    extAuthHandler=TRUE;
+                }
+            }
+        }
         if (tAuth[loop]==rfbVncAuth || tAuth[loop]==rfbNoAuth ||
+			extAuthHandler ||
 #if defined(LIBVNCSERVER_HAVE_GNUTLS) || defined(LIBVNCSERVER_HAVE_LIBSSL)
             tAuth[loop]==rfbVeNCrypt ||
 #endif
@@ -1177,6 +1195,22 @@ InitialiseRFBConnection(rfbClient* client)
     break;
 
   default:
+    {
+      rfbBool authHandled=FALSE;
+      rfbClientProtocolExtension* e;
+      for (e = rfbClientExtensions; e; e = e->next) {
+        uint32_t const* secType;
+        if (!e->handleAuthentication) continue;
+        for (secType = e->securityTypes; secType && *secType; secType++) {
+          if (authScheme==*secType) {
+            if (!e->handleAuthentication(client, authScheme)) return FALSE;
+            if (!rfbHandleAuthResult(client)) return FALSE;
+            authHandled=TRUE;
+          }
+        }
+      }
+      if (authHandled) break;
+    }
     rfbClientLog("Unknown authentication scheme from VNC server: %d\n",
 	    (int)authScheme);
     return FALSE;
@@ -1195,8 +1229,12 @@ InitialiseRFBConnection(rfbClient* client)
   client->si.format.blueMax = rfbClientSwap16IfLE(client->si.format.blueMax);
   client->si.nameLength = rfbClientSwap32IfLE(client->si.nameLength);
 
-  /* To guard against integer wrap-around, si.nameLength is cast to 64 bit */
-  client->desktopName = malloc((uint64_t)client->si.nameLength + 1);
+  if (client->si.nameLength > 1<<20) {
+      rfbClientErr("Too big desktop name length sent by server: %u B > 1 MB\n", (unsigned int)client->si.nameLength);
+      return FALSE;
+  }
+
+  client->desktopName = malloc(client->si.nameLength + 1);
   if (!client->desktopName) {
     rfbClientLog("Error allocating memory for desktop name, %lu bytes\n",
             (unsigned long)client->si.nameLength);
@@ -1229,7 +1267,6 @@ InitialiseRFBConnection(rfbClient* client)
     }
   }
 #endif
-
   rfbClientLog("Connected to VNC server, using protocol version %d.%d\n",
 	  client->major, client->minor);
 
@@ -1275,6 +1312,7 @@ SetFormatAndEncodings(rfbClient* client)
   if (!SupportsClient2Server(client, rfbSetEncodings)) return TRUE;
 
   se->type = rfbSetEncodings;
+  se->pad = 0;
   se->nEncodings = 0;
 
   if (client->appData.encodingsString) {
@@ -1665,6 +1703,7 @@ SendKeyEvent(rfbClient* client, uint32_t key, rfbBool down)
 
   if (!SupportsClient2Server(client, rfbKeyEvent)) return TRUE;
 
+  memset(&ke, 0, sizeof(ke));
   ke.type = rfbKeyEvent;
   ke.down = down ? 1 : 0;
   ke.key = rfbClientSwap32IfLE(key);
@@ -1683,6 +1722,7 @@ SendClientCutText(rfbClient* client, char *str, int len)
 
   if (!SupportsClient2Server(client, rfbClientCutText)) return TRUE;
 
+  memset(&cct, 0, sizeof(cct));
   cct.type = rfbClientCutText;
   cct.length = rfbClientSwap32IfLE(len);
   return  (WriteToRFBServer(client, (char *)&cct, sz_rfbClientCutTextMsg) &&
@@ -1899,7 +1939,7 @@ HandleRFBServerMessage(rfbClient* client)
 	/* Regardless of cause, do not divide by zero. */
 	linesToRead = bytesPerLine ? (RFB_BUFFER_SIZE / bytesPerLine) : 0;
 
-	while (h > 0) {
+	while (linesToRead && h > 0) {
 	  if (linesToRead > h)
 	    linesToRead = h;
 
@@ -2207,10 +2247,17 @@ HandleRFBServerMessage(rfbClient* client)
 
     msg.sct.length = rfbClientSwap32IfLE(msg.sct.length);
 
+    if (msg.sct.length > 1<<20) {
+	    rfbClientErr("Ignoring too big cut text length sent by server: %u B > 1 MB\n", (unsigned int)msg.sct.length);
+	    return FALSE;
+    }  
+
     buffer = malloc(msg.sct.length+1);
 
-    if (!ReadFromRFBServer(client, buffer, msg.sct.length))
+    if (!ReadFromRFBServer(client, buffer, msg.sct.length)) {
+      free(buffer);
       return FALSE;
+    }
 
     buffer[msg.sct.length] = 0;
 
@@ -2452,7 +2499,6 @@ PrintPixelFormat(rfbPixelFormat *format)
 #define rfbDes rfbClientDes
 #define rfbDesKey rfbClientDesKey
 #define rfbUseKey rfbClientUseKey
-#define rfbCPKey rfbClientCPKey
 
 #include "vncauth.c"
 #include "d3des.c"

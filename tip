@@ -1,2 +1,6 @@
-	moveton	Digi|home а это как раз не очень-то гуглится. Это отдельный раздел в display.inf, который странно, что ты ещё не читал. "The IBM Distributed Console Access Facility (DCAF) product provides a remote console function that allows one programmable workstation, called a controlling workstation, to control the keyboard and mouse input and monitor the display output of another programmable...
-	...workstation, called a target workstation"
+moveton	Digi|home а это как раз не очень-то гуглится. Это отдельный раздел в
+display.inf, который странно, что ты ещё не читал.
+"The IBM Distributed Console Access Facility (DCAF) product provides a remote
+console function that allows one programmable workstation, called a controlling
+workstation, to control the keyboard and mouse input and monitor the display
+output of another programmable workstation, called a target workstation"

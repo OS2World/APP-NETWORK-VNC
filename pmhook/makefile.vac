@@ -2,7 +2,7 @@
 
 NAME    = vncshook
 AUTOR   = Andrey Vasilkin
-VERSION = 1.0.0
+VERSION = 1.0.1
 COMMENT = Presentation Manager hook library
 
 DLLFILE = $(NAME).dll
@@ -21,7 +21,7 @@ $(DLLFILE): $(OBJS) $(DEFFILE)
 $(DEFFILE):
   @echo LIBRARY $(NAME) INITGLOBAL TERMGLOBAL >$@
   @echo EXETYPE OS2 >>$@
-#  @%%unixroot%%\usr\libexec\bin\date.exe +"OPTION DESCRIPTION '@#$(AUTOR):$(VERSION)#@##1## %%F %%T      %%HOSTNAME%%::ru:RUS:::@@$(COMMENT)'" >>$@
+  @%%unixroot%%\usr\libexec\bin\date.exe +"DESCRIPTION '@#$(AUTOR):$(VERSION)#@##1## %%F %%T      %%HOSTNAME%%::ru:RUS:::@@$(COMMENT)'" >>$@
   @echo CODE LOADONCALL EXECUTEREAD NOIOPL NONCONFORMING >>$@
   @echo DATA LOADONCALL READWRITE NOIOPL SINGLE SHARED >>$@
   @echo IMPORTS >>$@

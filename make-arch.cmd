@@ -70,11 +70,13 @@ cd..
 
 rem Make archives.
 
+del ./warpin/vnc.wpi 2>nul
 7za.exe a -tzip -mx7 -r0 -x!*.zip vnc%archdate% ./warpin/vnc.wpi
 
 :l01
 call clean.cmd
 
+del vnc-src%archdate% 2>nul
 7za.exe a -tzip -mx7 -r0 -x!*.zip vnc-src%archdate%
 
 :l02

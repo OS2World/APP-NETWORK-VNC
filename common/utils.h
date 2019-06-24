@@ -41,6 +41,8 @@
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+#define IS_HIGH_PTR(p)   ((unsigned long int)(p) >= (512*1024*1024))
+
 #ifdef __WATCOMC__
 #define	LONG_MAX       0x7fffffffL         /* max value for a long */
 #define	LONG_MIN       (-0x7fffffffL - 1)  /* min value for a long */
@@ -108,6 +110,12 @@ ULONG utilStrFindURIHosts(ULONG cbText, PCHAR pcText,
                           PVOID pData);
 PSZ utilStrNewSZ(ULONG cbStr, PCHAR pcStr);
 PCHAR utilStrLastChar(ULONG cbText, PCHAR pcText, CHAR chSearch);
+ULONG utilLoadInsertStr(HMODULE hMod,              // module handle
+                        BOOL fStrMsg,              // string (1) / message (0)
+                        ULONG ulId,                // string/message id
+                        ULONG cVal, PSZ *ppszVal,  // pointers to values
+                        ULONG cbBuf, PCHAR pcBuf); // result buffer
+
 
 #ifdef UTIL_INET_ADDR
 BOOL utilStrToInAddr(ULONG cbStr, PCHAR pcStr, struct in_addr *pInAddr);

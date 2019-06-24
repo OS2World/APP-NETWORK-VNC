@@ -3,7 +3,7 @@
 #
 
 NAME = vncshook
-VERSION = 1.0.0
+VERSION = 1.0.1
 DLLFILE = $(NAME).dll
 # DEBUGCODE = YES
 

@@ -208,7 +208,7 @@ rfbHttpCheckFds(rfbScreenInfoPtr rfbScreen)
 	httpProcessInput(rfbScreen);
     }
 
-#ifdef _DIGI
+#ifdef __OS2__
     if ( FD_ISSET(rfbScreen->httpListenSock, &fds) ) {
 #else
     if (FD_ISSET(rfbScreen->httpListenSock, &fds) || FD_ISSET(rfbScreen->httpListen6Sock, &fds)) {
@@ -466,6 +466,8 @@ httpProcessInput(rfbScreenInfoPtr rfbScreen)
 	contentType = "Content-Type: text/css\r\n";
     else if(ext && strcasecmp(ext, ".svg") == 0)
 	contentType = "Content-Type: image/svg+xml\r\n";
+    else if(ext && strcasecmp(ext, ".js") == 0)
+	contentType = "Content-Type: application/javascript\r\n";
     rfbWriteExact(&cl, contentType, strlen(contentType));
     /* end the header */
     rfbWriteExact(&cl, "\r\n", 2);

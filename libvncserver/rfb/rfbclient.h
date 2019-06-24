@@ -52,7 +52,6 @@
 #endif
 #include <rfb/rfbproto.h>
 #include <rfb/keysym.h>
-#include "turbojpeg.h"
 
 #ifdef LIBVNCSERVER_HAVE_SASL
 #include <sasl/sasl.h>
@@ -428,7 +427,7 @@ typedef struct _rfbClient {
 #ifdef LIBVNCSERVER_HAVE_LIBZ
 #ifdef LIBVNCSERVER_HAVE_LIBJPEG
 	/** JPEG decoder state. */
-	tjhandle tjhnd;
+	void *tjhnd;
 
 #endif
 #endif
@@ -621,6 +620,9 @@ typedef struct _rfbClientProtocolExtension {
 	rfbBool (*handleMessage)(rfbClient* cl,
 		 rfbServerToClientMsg* message);
 	struct _rfbClientProtocolExtension* next;
+	uint32_t const* securityTypes;
+	/** returns TRUE if it handled the authentication */
+	rfbBool (*handleAuthentication)(rfbClient* cl, uint32_t authScheme);
 } rfbClientProtocolExtension;
 
 void rfbClientRegisterExtension(rfbClientProtocolExtension* e);

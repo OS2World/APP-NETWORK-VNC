@@ -42,6 +42,7 @@ typedef HMTX MUTEX_TYPE;
 #define MUTEX_LOCK(mutex) DosRequestMutexSem( mutex, SEM_INDEFINITE_WAIT )
 #define MUTEX_UNLOCK(mutex) DosReleaseMutexSem( mutex )
 #elif defined(_MSC_VER)
+//#ifdef _MSC_VER
 typedef CRITICAL_SECTION MUTEX_TYPE;
 #define MUTEX_INIT(mutex) InitializeCriticalSection(&mutex)
 #define MUTEX_FREE(mutex) DeleteCriticalSection(&mutex)
@@ -657,7 +658,7 @@ ReadFromTLS(rfbClient* client, char *out, unsigned int n)
 }
 
 int
-WriteToTLS(rfbClient* client, char *buf, unsigned int n)
+WriteToTLS(rfbClient* client, const char *buf, unsigned int n)
 {
   unsigned int offset = 0;
   ssize_t ret;

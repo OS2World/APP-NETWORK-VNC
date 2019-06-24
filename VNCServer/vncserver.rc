@@ -14,12 +14,14 @@ STRINGTABLE
   IDS_UNDO                       "~Undo"
   IDS_DEFAULT                    "~Default"
   IDS_GENERAL                    "General"
+  IDS_WEBSOCKETS                 "WebSockets"
   IDS_ACCESS                     "Access"
   IDS_OPTIONS                    "Options"
   IDS_KEYBOARD                   "Keyboard"
   IDS_LOGGING                    "Logging"
   IDS_PROGRAMS                   "External programs"
-  IDS_SOURCE                     "Source"
+  IDS_NBPAGE                     "Page %1 of %2"
+  IDS_SOURCE                     "IP/mask, IP-IP"
   IDS_COMMENT                    "Comment"
   IDS_ALLOW                      "allow"
   IDS_DENY                       "deny"
@@ -28,6 +30,8 @@ STRINGTABLE
   IDS_TIME                       "Time"
   IDS_VERSION                    "Protocol"
   IDS_STATE                      "State"
+  IDS_CERTFILEDLG                "Select certificate file"
+  IDS_KEYFILEDLG                 "Select private key file"
 }
 
 MESSAGETABLE
@@ -129,6 +133,30 @@ DLGTEMPLATE IDDLG_PAGE_GENERAL
   }
 }
 
+DLGTEMPLATE IDDLG_PAGE_WEBSOCKETS
+{
+  DIALOG "WebSockets", IDDLG_PAGE_WEBSOCKETS, 0, 0, 160, 57,
+          FS_NOBYTEALIGN | NOT FS_DLGBORDER
+    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
+  {
+    CONTROL "~Certificate", -1, 8, 46, 50, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDEF_SSLCERTFILE, 58, 46, 120, 8, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, CCHMAXPATH, 0, 0
+    CONTROL "~Find...", IDPB_SSLCERTFILE, 58, 32, 35, 10, WC_BUTTON,
+            BS_DEFAULT | WS_VISIBLE | WS_TABSTOP
+
+    CONTROL "~Private key", -1, 8, 19, 50, 8, WC_STATIC,
+            SS_TEXT | DT_LEFT | DT_BOTTOM | DT_MNEMONIC | WS_VISIBLE
+    CONTROL "", IDEF_SSLKEYFILE, 58, 19, 120, 8, WC_ENTRYFIELD,
+            ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE | WS_TABSTOP
+      CTLDATA 8, CCHMAXPATH, 0, 0
+    CONTROL "Fi~nd...", IDPB_SSLKEYFILE, 58, 5, 35, 10, WC_BUTTON,
+            BS_DEFAULT | WS_VISIBLE | WS_TABSTOP
+  }
+}
+
 DLGTEMPLATE IDDLG_PAGE_ACCESS
 {
   DIALOG "Access", IDDLG_PAGE_ACCESS, 0, 0, 160, 57,
@@ -180,7 +208,11 @@ DLGTEMPLATE IDDLG_PAGE_OPTIONS
           FS_NOBYTEALIGN | NOT FS_DLGBORDER
     PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
   {
-    CONTROL "~Enable system tray/floating icon", IDCB_GUIVISIBLE, 8, 75, 200, 8,
+    CONTROL "Use ~VNCKBD$ driver", IDCB_DRIVER_VNCKBD, 8, 94, 200, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "Use ~system keyboard driver", IDCB_DRIVER_KBD, 8, 84, 200, 8, WC_BUTTON,
+            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
+    CONTROL "~Enable system tray/floating icon", IDCB_GUIVISIBLE, 8, 74, 200, 8,
             WC_BUTTON,
             BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
 
@@ -217,19 +249,6 @@ DLGTEMPLATE IDDLG_PAGE_OPTIONS
   }
 }
 
-DLGTEMPLATE IDDLG_PAGE_KBD
-{
-  DIALOG "Keyboard", IDDLG_PAGE_KBD, 0, 0, 160, 57,
-          FS_NOBYTEALIGN | NOT FS_DLGBORDER
-    PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
-  {
-    CONTROL "Use ~VNCKBD$ driver", IDCB_DRIVER_VNCKBD, 8, 16, 200, 8, WC_BUTTON,
-            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
-    CONTROL "Use ~system keyboard driver", IDCB_DRIVER_KBD, 8, 6, 200, 8, WC_BUTTON,
-            BS_AUTOCHECKBOX | WS_VISIBLE | WS_GROUP | WS_TABSTOP
-  }
-}
-
 DLGTEMPLATE IDDLG_PAGE_LOG
 {
   DIALOG "Logging", IDDLG_PAGE_LOG, 0, 0, 160, 57,
@@ -243,7 +262,7 @@ DLGTEMPLATE IDDLG_PAGE_LOG
     CONTROL "", IDEF_LOG_FILE, 58, 64, 120, 8, WC_ENTRYFIELD,
             ES_LEFT | ES_AUTOSCROLL | ES_MARGIN | WS_VISIBLE | WS_TABSTOP
       CTLDATA 8, CCHMAXPATH, 0, 0
-    CONTROL "Fi~nd", IDPN_LOG_FIND, 58, 50, 35, 10, WC_BUTTON,
+    CONTROL "Fi~nd...", IDPN_LOG_FIND, 58, 50, 35, 10, WC_BUTTON,
             BS_DEFAULT | WS_VISIBLE | WS_TABSTOP
     CONTROL "~Open folder", IDPB_LOG_FOLDER, 98, 50, 47, 10, WC_BUTTON,
             BS_DEFAULT | WS_VISIBLE | WS_TABSTOP

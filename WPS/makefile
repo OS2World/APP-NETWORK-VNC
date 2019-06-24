@@ -131,7 +131,6 @@ infCompiling: .SYMBOLIC
 
 clean: .symbolic
   @echo $(MSGPREF) Cleaning up
-  -@call install.cmd D
   if exist vncv.hlp del vncv.hlp
   @rm -f *.obj vncv.h *.ih *.err *.res
   if exist $(LNKFILE) del $(LNKFILE)

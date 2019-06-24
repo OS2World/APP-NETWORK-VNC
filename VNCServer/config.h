@@ -31,6 +31,8 @@ typedef struct _CONFIG {
   ULONG      ulPort;
   ULONG      ulHTTPPort;
   in_addr_t  inaddrListen;
+  CHAR       acSSLKeyFile[CCHMAXPATH+1];
+  CHAR       acSSLCertFile[CCHMAXPATH+1];
   ULONG      ulDeferUpdateTime;
   ULONG      ulDeferPtrUpdateTime;
                                //    1   |   2   |   3   |   4   |   5  |

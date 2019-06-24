@@ -109,7 +109,13 @@ int deny_severity=LOG_WARNING;
 #pragma warning (disable: 4018 4761)
 #endif
 #define read(sock,buf,len) recv(sock,buf,len,0)
+#ifdef EWOULDBLOCK
+#undef EWOULDBLOCK
+#endif
 #define EWOULDBLOCK WSAEWOULDBLOCK
+#ifdef ETIMEDOUT
+#undef ETIMEDOUT
+#endif
 #define ETIMEDOUT WSAETIMEDOUT
 #define write(sock,buf,len) send(sock,buf,len,0)
 #else
@@ -398,6 +404,7 @@ rfbCheckFds(rfbScreenInfoPtr rfbScreen,long usec)
 #ifdef WIN32
 	    errno = WSAGetLastError();
 #endif
+
 	    if (errno != EINTR)
 		rfbLogPerror("rfbCheckFds: select");
 	    return -1;
@@ -739,7 +746,7 @@ rfbPeekExactTimeout(rfbClientPtr cl, char* buf, int len, int timeout)
                 return n;
             }
 
-#ifdef LIBVNCSERVER_WITH_WEBSOCKETS
+#ifdef LIBVNCSERVER_WITH_WEBSOCKETS1
 	    if (cl->sslctx) {
 		if (rfbssl_pending(cl))
 		    continue;

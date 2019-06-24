@@ -1,5 +1,5 @@
-PATH_BIN = ..\bin
-FILE_BIN = $(PATH_BIN)\$(NAME).$(EXT)
+PATH_BIN = ../bin
+FILE_BIN = $(PATH_BIN)/$(NAME).$(EXT)
 FILE_LIB = $(NAME).a
 FILE_DEF = $(NAME).def
 FILE_RC  = $(NAME).rc
@@ -11,7 +11,7 @@ AR = ar
 
 LXLITE = @lxlite /CS $(FILE_BIN)
 
-CFLAGS += -Wall -s -Wno-format -I. \
+CFLAGS += -Wall -s -Wno-format -Wno-strict-aliasing -I. \
           -I./ -I../libvncserver -I../common -I../libvncserver/common -I../os2xkey -I../vncpm \
           -I../libgiconv -I../vnckbd \
           -idirafter /@unixroot/usr/include/os2tk45 -DUSE_OS2_TOOLKIT_HEADERS
@@ -25,10 +25,10 @@ endif
 OBJS = $(SRCS:.c=.o)
 
 ifeq ($(EXT),dll)
-LDFLAGS += -Zdll -Zmtd
+LDFLAGS += -Zdll -Zmtd -Zomf
 endif
 
-LDFLAGS += -Zomf -Zhigh-mem $(OBJS) $(LIBS) -o $(FILE_BIN)
+LDFLAGS += -Zhigh-mem $(OBJS) $(LIBS) -o $(FILE_BIN)
 # -Zlinker option -Zlinker eliminate
 
 

@@ -50,6 +50,8 @@ PCONFIG cfgGetDefault()
   pConfig->ulPort = 5900;
   pConfig->ulHTTPPort = 5900 - 100;
   pConfig->inaddrListen = INADDR_ANY;
+  pConfig->acSSLKeyFile[0] = '\0';
+  pConfig->acSSLCertFile[0] ='\0';
   pConfig->ulDeferUpdateTime = 5;
   pConfig->ulDeferPtrUpdateTime = 0;
   pConfig->fAlwaysShared = FALSE;
@@ -112,6 +114,11 @@ PCONFIG cfgGet(HAB hab)
   PrfQueryProfileString( hIni, _INISEC_MAIN, "Interface", "0.0.0.0",
                          acBuf, sizeof(acBuf) );
   pConfig->inaddrListen = inet_addr( acBuf );
+
+  PrfQueryProfileString( hIni, _INISEC_MAIN, "Certificate", "",
+                         pConfig->acSSLCertFile, sizeof(pConfig->acSSLCertFile) );
+  PrfQueryProfileString( hIni, _INISEC_MAIN, "PrivateKey", "",
+                         pConfig->acSSLKeyFile, sizeof(pConfig->acSSLKeyFile) );
 
   pConfig->ulDeferUpdateTime =
     utilINIQueryULong( hIni, _INISEC_MAIN, "DeferUpdateTime",
@@ -278,6 +285,10 @@ VOID cfgStore(PCONFIG pConfig)
   utilINIWriteULong( hIni, _INISEC_MAIN, "HTTPPort", pConfig->ulHTTPPort );
   PrfWriteProfileString( hIni, _INISEC_MAIN, "Interface",
                      inet_ntoa( *((struct in_addr *)&pConfig->inaddrListen) ) );
+  PrfWriteProfileString( hIni, _INISEC_MAIN, "Certificate",
+                         pConfig->acSSLCertFile );
+  PrfWriteProfileString( hIni, _INISEC_MAIN, "PrivateKey",
+                         pConfig->acSSLKeyFile );
   utilINIWriteULong( hIni, _INISEC_MAIN, "DeferUpdateTime",
                      pConfig->ulDeferUpdateTime );
   utilINIWriteULong( hIni, _INISEC_MAIN, "DeferPtrUpdateTime",
@@ -358,7 +369,7 @@ VOID cfgFree(PCONFIG pConfig)
     debug( "Argument is NULL" );
   else
   {
-    if ( pConfig->hIni == NULLHANDLE )
+    if ( pConfig->hIni != NULLHANDLE )
       PrfCloseProfile( pConfig->hIni );
     
     aclFree( &pConfig->stACL );

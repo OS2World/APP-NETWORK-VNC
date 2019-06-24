@@ -40,6 +40,9 @@
 #ifdef WIN32
 #undef SOCKET
 #include <winsock2.h>
+#ifdef EWOULDBLOCK
+#undef EWOULDBLOCK
+#endif
 #define EWOULDBLOCK WSAEWOULDBLOCK
 #define close closesocket
 #define read(sock,buf,len) recv(sock,buf,len,0)
@@ -386,14 +389,12 @@ ConnectClientToTcpAddr(unsigned int host, int port)
     return -1;
   }
 
-#ifndef _DIGI_NO_TCP_NODELAY
   if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY,
 		 (char *)&one, sizeof(one)) < 0) {
     rfbClientErr("ConnectToTcpAddr: setsockopt\n");
     close(sock);
     return -1;
   }
-#endif
 
   return sock;
 }
@@ -443,14 +444,12 @@ ConnectClientToTcpAddr6(const char *hostname, int port)
     return -1;
   }
 
-#ifndef _DIGI_NO_TCP_NODELAY
   if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY,
 		 (char *)&one, sizeof(one)) < 0) {
     rfbClientErr("ConnectToTcpAddr: setsockopt\n");
     close(sock);
     return -1;
   }
-#endif
 
   return sock;
 

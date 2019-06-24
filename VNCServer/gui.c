@@ -61,6 +61,7 @@ typedef struct _WINDATA {
   HPOINTER   hptrTransparentIcon;
 
   BOOL       fVisible;
+  ULONG      cClients;
 } WINDATA, *PWINDATA;
 
 typedef struct _THREADDATA {
@@ -84,6 +85,38 @@ static ULONG           ulWMXSTCreated = 0;
 static PFNWP           oldWndFrameProc = NULLHANDLE;
 
 
+// Makes title string, like "VNC Client - clients: 1".
+static ULONG _makeTitle(ULONG cbBuf, PCHAR pcBuf, ULONG cClients)
+{
+  PCHAR      pcPtr = pcBuf;
+
+  if ( cbBuf <= APP_NAME_LENGTH )
+  {
+    strlcpy( pcBuf, APP_NAME, cbBuf );
+    return strlen( pcBuf );
+  }
+
+  strcpy( pcPtr, APP_NAME );
+  pcPtr += APP_NAME_LENGTH;
+  cbBuf -= APP_NAME_LENGTH;
+  if ( ( cbBuf > 6 ) && ( cClients != 0 ) )
+  {
+    LONG     lLen;
+
+    *((PULONG)pcPtr) = 0x00202D20; // ' - \0'
+    pcPtr += 3;
+    cbBuf -= 3;
+    lLen = WinLoadString( habGUI, 0, IDS_CLIENTS, cbBuf, pcPtr );
+    pcPtr += lLen;
+    cbBuf -= lLen;
+    lLen = _snprintf( pcPtr, cbBuf, ": %u", cClients );
+    if ( lLen != -1 )
+      pcPtr += lLen;
+  }
+
+  return pcPtr - pcBuf;
+}
+
 static MRESULT EXPENTRY wndFrameProc(HWND hwnd, ULONG msg, MPARAM mp1,
                                      MPARAM mp2)
 {
@@ -98,6 +131,33 @@ static MRESULT EXPENTRY wndFrameProc(HWND hwnd, ULONG msg, MPARAM mp1,
     case WM_BUTTON2DOWN:
       WinSendMsg( hwnd, WM_TRACKFRAME, MPFROMSHORT( TF_MOVE | TF_STANDARD ), 0 );
       return (MRESULT)0;
+
+    case WM_QUERYWINDOWPARAMS:
+      // Return title for WinQueryWindowText(). Both tray widgets will use this.
+      if ( (((PWNDPARAMS)mp1)->fsStatus & WPM_CCHTEXT) == 0 )
+        break;
+      {
+        PWINDATA   pData = WinQueryWindowPtr( hwndGUI, 0 );
+        PWNDPARAMS pParam = (PWNDPARAMS)mp1;
+
+        pParam->cchText = _makeTitle( pParam->cchText, pParam->pszText,
+                                      pData == NULL ? 0 : pData->cClients );
+      }
+      return (MRESULT)TRUE;
+
+/*
+    [Digi] 2019-03-31 Can it work? TK, WinLoadPointer():
+      The pointer is owned by the process from which this function is issued.
+      It cannot be accessed directly from any other process.
+
+    case WM_QUERYICON:
+      {
+        PWINDATA   pData = WinQueryWindowPtr( hwndGUI, 0 );
+
+        if ( pData != NULL )
+          return (MRESULT)pData->hptrIcon;
+      }
+*/
   }
 
   return oldWndFrameProc( hwnd, msg, mp1, mp2 );
@@ -154,7 +214,8 @@ static VOID _ctrlGUIShow(HWND hwnd)
       stSwCntrl.uchVisibility = SWL_VISIBLE;
       stSwCntrl.fbJump        = SWL_JUMPABLE;
       stSwCntrl.bProgType     = PROG_PM;
-      strcpy( stSwCntrl.szSwtitle, APP_NAME );
+      _makeTitle( sizeof(stSwCntrl.szSwtitle), stSwCntrl.szSwtitle,
+                  pData->cClients );
       WinQueryWindowProcess( hwndFrame, &stSwCntrl.idProcess, NULL );
       WinAddSwitchEntry( &stSwCntrl );
     }
@@ -279,12 +340,20 @@ static VOID _wmDestroy(HWND hwnd)
   WinPostMsg( hwndSrv, WM_CLOSE, 0, 0 );
 }
 
-static VOID _wmDDEInitiateAck(HWND hwnd, HWND hwndTrayServer)
+static VOID _wmDDEInitiateAck(HWND hwnd, HWND hwndTrayServer, PDDEINIT pInit)
 {
   PWINDATA   pData = WinQueryWindowPtr( hwnd, 0 );
 
   if ( hwndTrayServer == NULLHANDLE )
     return;
+
+  debug( "app: \"%s\", topic: \"%s\"", pInit->pszAppName, pInit->pszTopic );
+  if ( ( strcmp( pInit->pszAppName, "SystrayServer" ) != 0 ) ||
+       ( strcmp( pInit->pszTopic, "TRAY" ) != 0 ) )
+  {
+    debugCP( "It's not systray DDE server" );
+    return;
+  }
 
   pData->hwndTrayServer = hwndTrayServer;
   WinPostMsg( hwndTrayServer, WM_TRAYADDME, (MPARAM)hwnd, 0 );
@@ -310,10 +379,11 @@ static VOID _wmGUIClntNumChanged(HWND hwnd, MPARAM mp1, MPARAM mp2)
 //  rfbClientPtr         pClient = (rfbClientPtr)PVOIDFROMMP(mp2);
   ULONG                ulIconId;
   HPOINTER             hptrIcon, hptrIconOld;
-  CHAR                 acBuf[64];
 
 /*  debug( "Client %s has %s server (total clients: %u)",
          pClient->host, fNewClient ? "join" : "left", cClients );*/
+
+  pData->cClients = cClients;
 
   if ( pData->hwndClients != NULLHANDLE )
     WinSendMsg( pData->hwndClients, WMCLNT_CLNTNUMCHANGED, mp1, mp2 );
@@ -325,33 +395,24 @@ static VOID _wmGUIClntNumChanged(HWND hwnd, MPARAM mp1, MPARAM mp2)
   else
     return;
 
+  hptrIconOld = pData->hptrIcon;
   hptrIcon = WinLoadPointer( HWND_DESKTOP, NULLHANDLE, ulIconId );
   if ( hptrIcon == NULLHANDLE )
   {
     debug( "Icon #%u could not be loaded" );
-    return;
+    hptrIconOld = NULLHANDLE;
   }
-
-  hptrIconOld = pData->hptrIcon;
-  pData->hptrIcon = hptrIcon;
+  else
+    pData->hptrIcon = hptrIcon;
 
   WinSendMsg( hwndFrame, WM_SETICON, MPFROMLONG(pData->hptrIcon), 0 );
 
-  strcpy( acBuf, APP_NAME );
-  if ( cClients != 0 )
-  {
-    PCHAR    pcBuf = &acBuf[APP_NAME_LENGTH];
-
-    *((PULONG)pcBuf) = 0x00202D20; // ' - \0'
-    pcBuf += 3;
-    pcBuf += WinLoadString( habGUI, 0, IDS_CLIENTS, sizeof(acBuf) - 24, pcBuf );
-    sprintf( pcBuf, ": %u", cClients );
-  }
-
-  WinSetWindowText( hwndFrame, acBuf );
-
   if ( pData->fVisible )
   {
+    CHAR     acBuf[64];
+
+    WinQueryWindowText( hwndFrame, sizeof(acBuf), acBuf );
+
     if ( hmodXSysTray != NULLHANDLE )
     {
       xstReplaceSysTrayIcon( hwnd, 0, pData->hptrIcon );
@@ -363,12 +424,11 @@ static VOID _wmGUIClntNumChanged(HWND hwnd, MPARAM mp1, MPARAM mp2)
 
     if ( !pData->fXSTEnable && ( pData->hwndTrayServer == NULLHANDLE ) )
     {
-      SWCNTRL  stSwCntrl;
-      HSWITCH  hSwitch = WinQuerySwitchHandle( hwndFrame, 0 );
+      SWCNTRL          stSwCntrl;
+      HSWITCH          hSwitch = WinQuerySwitchHandle( hwndFrame, 0 );
 
-      if ( WinQuerySwitchEntry( hSwitch, &stSwCntrl ) == 0 )
+      if ( WinQuerySwitchEntry( hSwitch, &stSwCntrl ) == 0 ) // 0 - Success.
       {
-        pData->hptrIcon = hptrIcon;
         strlcpy( stSwCntrl.szSwtitle, acBuf, MAXNAMEL );
         WinChangeSwitchEntry( hSwitch, &stSwCntrl );
       }
@@ -519,7 +579,7 @@ static MRESULT EXPENTRY wndProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
       break;
 
     case WM_DDE_INITIATEACK:
-      _wmDDEInitiateAck( hwnd, (HWND)mp1 );
+      _wmDDEInitiateAck( hwnd, (HWND)mp1, (PDDEINIT)mp2 );
       return (MRESULT)TRUE;
 
     case WMGUI_XSYSTRAY:                // Extended system tray widget message.

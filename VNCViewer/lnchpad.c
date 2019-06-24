@@ -71,7 +71,7 @@ static OPTDLGDATA      stDefOpt =
   FALSE,     // fViewOnly
   TRUE,      // fShareDesktop
   "",        // acCharset
-  "Tight ZRLE Ultra CopyRect Hextile Zlib CoRRE RRE RAW", // acEncodings
+  "Tight TRLE ZRLE Ultra CopyRect Hextile Zlib CoRRE RRE RAW", // acEncodings
   5,         // ulCompressLevel
   6          // ulQualityLevel
 };
@@ -903,7 +903,7 @@ BOOL lpOpenDlg()
 BOOL lpStoreLogonInfo(PSZ pszHost, PCCLOGONINFO pLogonInfo)
 {
   HINI       hIni;
-  BOOL       fSuccess;
+  BOOL       fSuccess = FALSE;
 
   debug( "Store %s...", pLogonInfo->fCredential ? "credential" : "password" );
 
@@ -984,7 +984,7 @@ BOOL lpQueryLogonInfo(PSZ pszHost, PCCLOGONINFO pLogonInfo,
 BOOL lpStoreWinRect(PSZ pszHost, PRECTL pRect)
 {
   HINI       hIni;
-  BOOL       fSuccess;
+  BOOL       fSuccess = FALSE;
 
   hIni = _iniOpen();
   if ( hIni != NULLHANDLE )
@@ -1004,7 +1004,7 @@ BOOL lpStoreWinRect(PSZ pszHost, PRECTL pRect)
 BOOL lpQueryWinRect(PSZ pszHost, PRECTL pRect)
 {
   HINI       hIni;
-  BOOL       fSuccess;
+  BOOL       fSuccess = FALSE;
   ULONG      cbRect = sizeof(RECTL);
 
   hIni = _iniOpen();
@@ -1025,7 +1025,7 @@ BOOL lpQueryWinRect(PSZ pszHost, PRECTL pRect)
 
 BOOL lpCommitArg(int argc, char** argv)
 {
-  PHOSTDATA    pHost, pHostsNew, pHosts = NULL;
+  PHOSTDATA    pHost = NULL, pHostsNew, pHosts = NULL;
   ULONG        cHosts = 0;
   HINI         hIni;
   CHAR         chSw;

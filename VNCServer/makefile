@@ -11,7 +11,7 @@ NAME = vncserver
 # Binary file extension (dll/exe)
 EXT = exe
 
-VERSION = 0.1.5
+VERSION = 0.1.6
 DESCRIPTION = VNC Server
 
 # Compilation flags for ../common/utils.c
@@ -30,10 +30,10 @@ CFLAGS = -DVERSION=\"$(VERSION)\"
 include ../common/makefile.begin
 
 
-$(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES) msgBuilding
+$(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES) ../libvncserver/vncserver.a msgBuilding
 	$(CC) $(FILE_DEF) $(LDFLAGS)
-	$(RC) $(RCLFLAGS)
 	$(LXLITE)
+	$(RC) $(RCLFLAGS)
 
 $(FILE_DEF):
 ifneq ($(DEBUGCODE),YES)

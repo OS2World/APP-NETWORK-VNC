@@ -7,6 +7,7 @@ Contents
    - VNC Viewer - client to access remote desktop service.
    - VNC Server - graphical desktop sharing.
    - Keyboard Map Utility.
+   - Known Issues.
    - Autor.
 
 
@@ -37,6 +38,10 @@ eCenter/XCenter with VNC Server:
 
 or System Tray Widget ver. 0.3 (by ErOs2).
 
+Install vnc.wpi WarpIn package. After installation, the folder "VNC" will
+appear on the desktop. If component VNC Viewer was selected, the VNC Viewer
+template appears in the list of system templates.
+
 
 VNC Viewer - client to access remote desktop service
 ----------------------------------------------------
@@ -45,7 +50,7 @@ This package provides a VNC-client for OS/2 Presentation Manager, you can
 connect to a VNC-server somewhere in the network and display its content in a
 window. VNC stands for Virtual Network Computing. 
 
-VNC Client supports UltraVNC advanced features such as file franfering and
+VNC Viewer supports UltraVNC advanced features such as file franfering and
 chat.
 
 Command line switches for VNC Viewer
@@ -65,7 +70,7 @@ Command line switches for VNC Viewer
   -s <1|Y|YES|ON|0|N|NO|OFF> - Request shared session.
   -e "enc1 enc2 ..."         - Support encodings:
                                  RAW COPYRECT TIGHT HEXTILE ZLIB ZLIBHEX
-                                 ZRLE ZYWRLE ULTRA CORRE RRE.
+                                 ZRLE TRLE ZYWRLE ULTRA CORRE RRE.
                                First encoding is most prfered.
   -o N                       - Compress level for encodings: TIGHT, ZLIB and
                                ZLIBHEX (0..9).
@@ -97,14 +102,8 @@ on the remote computer.
 VNC Server supports UltraVNC advanced features such as file franfering and
 chat.
 
-Web Browser Access
-
-Users may access their desktops from any computer with any Java-enabled or
-HTML5-capable Web browser, without installing any software on the client
-computer. VNC displays a desktop within a browser window by running a Java
-applet or uses HTML5 capabilities.
-
 This program based on LibVNCServer library licensed under the GPL.
+
 
 Command line switches for VNC Server
 
@@ -118,6 +117,28 @@ Command line switches for VNC Server
     shutdown                 - Shutdown server.
 
 
+Web Browser Access
+
+Users may access their desktops from any computer with any modern Java-enabled
+or HTML5-capable Web browser, without installing any software on the client
+computer. VNC displays a desktop within a browser window by running a Java
+applet or uses noVNC Open Source VNC client. noVNC is a browser based VNC
+client implemented using HTML5 Canvas and WebSockets.
+
+
+Enabling WebSockets encryption
+
+To enable WebSockets encryption for clients such as noVNC, open the properties
+notebook and go to the General page 2 "WebSockets". Specify a files that
+contains SSL certificate and private key.
+
+You can use the OpenSSL utility to generate a Private Key and Self-Signed
+Certificate:
+
+>openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -keyout vncs.key
+           -out vncs.crt
+
+
 Keyboard Map Utility
 --------------------
 
@@ -125,19 +146,19 @@ Client sends keyboard events to the server. The key itself is specified using
 the "keysym" values defined by the X Window System, even if the client or
 server is not running the X Window System.
 
-VNC Server and VNC Client provided by this package use correspondence tables
+VNC Server and VNC Viewer provided by this package use correspondence tables
 to translate system keyboard events to "keysym" values and back. Usualy two
 tables are used: "local" table for national keys and additional "general" table
 for standart keyboard. Keyboard Map Utility is a program to edit correspondence
 tables.
 
-Tables are held in text files .\keysym\*.xk . VNC Server and VNC Client will
+Tables are held in text files .\keysym\*.xk . VNC Server and VNC Viewer will
 try to load files in order: user.xk, NNN.xk, general.xk (where NNN is a system
 local page number). Each next loaded file complements common table in memory.
 user.xk - top priority, it can be used for your experiments or external
 non-standard keypads.
 
-When "local" table (NNN.xk) does not exist, VNC Server and VNC Client will try
+When "local" table (NNN.xk) does not exist, VNC Server and VNC Viewer will try
 to use unicode-related "keysym" values for keys which generate characters.
 RFC 6143, "7.5.4. KeyEvent":
   "Modern versions of the X Window System handle keysyms for Unicode
@@ -158,13 +179,23 @@ Note that not all other VNC clients/servers supports national keyboards.
 For more detailed information see RFC 6143, 7.5.4. KeyEvent.
 
 
+Known Issues
+------------
+
+- VNC Server: In the non-View-Only mode on an unencrypted WebSockets
+  connection, the client is disconnected.
+
+- You may have to accept a self-signed certificate for WebSockets before using
+  an encrypted connection by entering a similar address in your browser:
+
+    https://myhost:5900/
+
+
 Autor
 -----
 
 Donations are most welcome!
-https://www.arcanoae.com/shop/os2-ports-and-applications-by-andrey-vasilkin/
 PayPal: digi@os2.snc.ru
 
-Andrey Vasilkin, 2017-2018
+Andrey Vasilkin, 2017-2019
 E-mail: digi@os2.snc.ru
-Jabber: digi@frs.snc.ru

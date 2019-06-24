@@ -129,6 +129,47 @@ static ULONG _cbSubstProg(CHAR chKey, ULONG cbBuf, PCHAR pcBuf, PVOID pData)
   Runs external program (wait for) pszCommand, performs substitution for
   %-keys. Stores first line from stdout to pcOutputBuf if it's not a NULL.
 */
+
+// Passes the string pszCommand to the command processor (CMD.EXE).
+static LONG __execCmd(PSZ pszCommand)
+{
+  ULONG		ulRC;
+  CHAR		acError[CCHMAXPATH];
+  RESULTCODES	sResCodes;
+  PCHAR		pcArg;
+  PSZ		pszCmd;
+  ULONG		cbCmd;
+  ULONG		cbCommand;
+  
+  // Make arguments for CMD
+
+  pszCmd = getenv( "COMSPEC" );
+  cbCmd = strlen( pszCmd );
+  cbCommand = strlen( pszCommand );
+  pcArg = alloca( cbCmd + 5 /* ZERO " /c " */ + cbCommand + 2 /* ZERO ZERO */ );
+  if ( pcArg == NULL )
+  {
+    debug( "Not enough stack size" );
+    return -1;
+  }
+  memcpy( pcArg, pszCmd, cbCmd );
+  pcArg[cbCmd++] = '\0';
+  memcpy( &pcArg[cbCmd], " /c ", 4 );
+  cbCmd += 4;
+  memcpy( &pcArg[cbCmd], pszCommand, cbCommand );
+  *((PUSHORT)&pcArg[cbCmd + cbCommand]) = 0;
+
+  ulRC = DosExecPgm( acError, sizeof(acError), EXEC_SYNC, 
+                     pcArg, NULL, &sResCodes, pcArg );
+  if ( ulRC != NO_ERROR )
+  {
+    debug( "DosExecPgm(,,,,,,%s), rc = %u", pcArg, ulRC );
+    return -1;
+  }
+
+  return sResCodes.codeTerminate;
+}
+
 static VOID _progExecute(rfbClientPtr prfbClient, PSZ pszCommand,
                          ULONG cbOutputBuf, PCHAR pcOutputBuf)
 {
@@ -139,11 +180,16 @@ static VOID _progExecute(rfbClientPtr prfbClient, PSZ pszCommand,
 
   if ( utilStrFormat( sizeof(acCommand), acCommand, -1, pszCommand,
                       _cbSubstProg, prfbClient ) <= 0 )
+  {
+    debug( "utilStrFormat() for \"%s\" failed", pszCommand );
     return;
+  }
 
   if ( ( cbOutputBuf == 0 ) || ( pcOutputBuf == NULL ) )
   {
-    system( acCommand );
+    debug( "#1 call system(\"%s\")", acCommand );
+ //   system( acCommand );
+    __execCmd( acCommand );
     return;
   }
 
@@ -165,7 +211,9 @@ static VOID _progExecute(rfbClientPtr prfbClient, PSZ pszCommand,
   dup2( ahRead[1], STDOUT_FILENO );
   close( ahRead[1] );
 
-  iRC = system( acCommand );
+  debug( "#2 call system(\"%s\")", acCommand );
+//  iRC = system( acCommand );
+  __execCmd( acCommand );
 
   dup2( hOldOut, STDOUT_FILENO );
   close( hOldOut );
@@ -180,9 +228,13 @@ static VOID _progExecute(rfbClientPtr prfbClient, PSZ pszCommand,
 
     *pcEOL =  '\0';
     utilStrTrim( pcOutputBuf );
+    debug( "Program output: %s", pcOutputBuf );
   }
   else
+  {
+    debugCP( "No any data was received" );
     *pcOutputBuf = '\0';
+  }
 
   if ( close( ahRead[0] ) == -1 )
     debug( "Cannot close ahRead[0]" );
@@ -1554,6 +1606,11 @@ VOID rfbsDone()
       prfbScreen->frameBuffer = NULL;
     }
 
+    if ( prfbScreen->sslkeyfile != NULL )
+      free( prfbScreen->sslkeyfile );
+    if ( prfbScreen->sslcertfile != NULL )
+      free( prfbScreen->sslcertfile );
+
     rfbShutdownServer( prfbScreen, TRUE );
     rfbScreenCleanup( prfbScreen );
     prfbScreen = NULL;
@@ -1734,12 +1791,22 @@ BOOL rfbsSetServer(PCONFIG pConfig)
   prfbNewScreen->listenInterface         = pConfig->inaddrListen;
   prfbNewScreen->permitFileTransfer      = pConfig->fFileTransfer ? -1 : 0;
 
-  if ( pConfig->fUltraVNCSupport )
-  {
-    // Version for UltraVNC features (UltraVNC viewer will check it).
-    prfbNewScreen->protocolMajorVersion = 3;
-    prfbNewScreen->protocolMinorVersion = 6;
-  }
+  prfbNewScreen->protocolMajorVersion    = rfbProtocolMajorVersion; // 3
+  // Minor version for UltraVNC features is 6 (UltraVNC viewer will check it).
+  prfbNewScreen->protocolMinorVersion    = pConfig->fUltraVNCSupport
+                                          ? 6 : rfbProtocolMinorVersion;
+
+  // SSL key and cert. files for websockets.
+  if ( prfbNewScreen->sslkeyfile != NULL )
+    free( prfbNewScreen->sslkeyfile );
+  prfbNewScreen->sslkeyfile              = strdup( pConfig->acSSLKeyFile );
+
+  if ( prfbNewScreen->sslcertfile != NULL )
+    free( prfbNewScreen->sslcertfile );
+  prfbNewScreen->sslcertfile             = strdup( pConfig->acSSLCertFile );
+
+  debug( "SSL key: %s , cert.: %s\n",
+         prfbNewScreen->sslkeyfile, prfbNewScreen->sslcertfile );
 
   // Set passwords.
 

@@ -441,7 +441,7 @@ static BOOL _appInit(int argc, char** argv)
     pConfig = cfgGet();
     if ( pConfig == NULL )
     {
-      debug( "cfgQuery() failed" );
+      debugCP( "cfgGet() failed" );
       break;
     }
 

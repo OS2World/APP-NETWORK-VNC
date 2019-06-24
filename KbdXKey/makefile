@@ -12,7 +12,7 @@ VERSION = 1.0.0
 DESCRIPTION = Keyboard scan utility
 
 # Uncomment next line to make debug version
-# DEBUGCODE = YES
+DEBUGCODE = YES
 
 # Sources
 SRCS = kbdxkey.c namestbl.c testkey.c utils.c
@@ -25,8 +25,8 @@ include ../common/makefile.begin
 
 $(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES) msgBuilding
 	$(CC) $(FILE_DEF) $(LDFLAGS)
-	$(RC) $(RCLFLAGS)
 	$(LXLITE)
+	$(RC) $(RCLFLAGS)
 
 $(FILE_DEF):
 ifneq ($(DEBUGCODE),YES)
