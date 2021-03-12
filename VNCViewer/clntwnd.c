@@ -26,7 +26,9 @@
 extern HAB             hab;
 extern HMQ             hmq;
 extern ULONG           cOpenWin;
+#ifdef USE_AMOUSEREG
 BOOL _stdcall (*pfnWinRegisterForWheelMsg)(HWND hwnd, ULONG flWindow);
+#endif
 
 // fxdlg.c
 extern HWND fxdlgOpen(HWND hwndOwner, PSZ pszServer, PCLNTCONN pCC);
@@ -156,10 +158,12 @@ static MRESULT _wmCreate(HWND hwnd, MPARAM mp1, MPARAM mp2)
 
   WinSetWindowPtr( hwnd, 0, pWinData );
 
+#ifdef USE_AMOUSEREG
   // Register for wheel messages being sent to window.
   if ( ( pfnWinRegisterForWheelMsg != NULL ) &&
        !pfnWinRegisterForWheelMsg( hwnd, AW_OWNERFRAME ) )
     debug( "WinRegisterForWheelMsg() failed" );
+#endif
 
   hwndMenu = WinWindowFromID( hwndFrame, FID_SYSMENU );
   if ( hwndMenu != NULLHANDLE )
@@ -1205,6 +1209,7 @@ MRESULT EXPENTRY wndProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
       _wmMouse( hwnd, *((POINTS *)&mp1), RFBBUTTON_MIDDLE );
       break;
 
+#ifdef USE_AMOUSEREG
     case WM_MOUSEWHEEL_VERT:     // Amouse event.
       {
         POINTL         pointl;
@@ -1225,12 +1230,49 @@ MRESULT EXPENTRY wndProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
                       : (RFBBUTTON_WHEEL_DOWN | RFBBUTTON_PRESSED) );
       }
       return (MRESULT)FALSE;
+#endif
 
     case WM_PAINT:
       _wmPaint( hwnd );
       return (MRESULT)FALSE;
 
     case WM_VSCROLL:
+      if ( SHORT1FROMMP(mp1) == 0 && SHORT1FROMMP(mp2) == 0 )
+      {
+       /* If the window has not been registered for amouse, i.e.
+          WinRegisterForWheelMsg function has failed, when scrolling the mouse
+          wheel we will receive WM_VSCROLL events instead of WM_MOUSEWHEEL_VERT
+          when scrolling the mouse wheel.  */
+
+        ULONG          ulFlags = 0;
+        POINTL         ptL;
+        QMSG           qmsg;
+        HAB            hab = WinQueryAnchorBlock( hwnd );
+
+        if ( SHORT2FROMMP(mp2) == SB_LINEUP )
+          ulFlags = RFBBUTTON_WHEEL_UP | RFBBUTTON_PRESSED;
+        else if ( SHORT2FROMMP(mp2) == SB_LINEDOWN )
+          ulFlags = RFBBUTTON_WHEEL_DOWN | RFBBUTTON_PRESSED;
+        else
+          break;
+
+        WinQueryMsgPos( hab, &ptL );
+        WinMapWindowPoints( HWND_DESKTOP, hwnd, &ptL, 1 );
+        ((POINTS *)&mp2)->x = ptL.x;
+        ((POINTS *)&mp2)->y = ptL.y;
+
+        _wmMouse( hwnd, *((POINTS *)&mp2), ulFlags );
+
+        /* On my system, three WM_VSCROLL messages come from AMouse at once.
+           Here we delete all remaining WM_VSCROLL messages in the queue.  */
+        while( WinPeekMsg( hab, &qmsg, NULLHANDLE, WM_VSCROLL, WM_VSCROLL,
+                           PM_REMOVE ) )
+        { }
+
+        return (MRESULT)FALSE;
+      }
+      // Not amouse message - fail in case WM_HSCROLL
+
     case WM_HSCROLL:
       if ( _wmScroll( hwnd, SHORT1FROMMP(mp1), SHORT1FROMMP(mp2),
                       SHORT2FROMMP(mp2) ) )

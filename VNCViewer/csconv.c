@@ -26,6 +26,7 @@ static iconv_t _dirIConvOpen(ULONG ulDirection, PSZ pszCS)
   PSZ        pszFromCode = ulDirection == CSC_LOCALTOREMOTE ? "" : pszCS;
   iconv_t    ic;
 
+  debug( "iconv_open(\"%s\",\"%s\")...", pszToCode, pszFromCode );
   ic = iconv_open( (const char *)pszToCode, (const char *)pszFromCode );
   if ( ic == ((iconv_t)(-1)) )
     debug( "iconv_open(\"%s\",\"%s\") failed", pszToCode, pszFromCode );
@@ -214,6 +215,10 @@ PSZ cscConv(rfbClient* client, ULONG ulDirection, ULONG cbStr, PCHAR pcStr)
 
 //  pszStrOut = _dirConv( pDir, cbStr, pcStr );
   pszStrOut = cscIConv( pDir->ic, cbStr, pcStr );
+  debug( "Convert %s: \"%s\" -> \"%s\"",
+         ulDirection == CSC_LOCALTOREMOTE ? "local to remote" : "remote to local",
+         debugBufPSZ( pcStr, cbStr ),
+         pszStrOut == NULL ? "NULL" : pszStrOut );
 
   if ( pszStrOut == NULL )
   {

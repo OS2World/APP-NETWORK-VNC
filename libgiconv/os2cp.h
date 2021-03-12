@@ -10,5 +10,6 @@ typedef struct _NAME2CP {
 } NAME2CP, *PNAME2CP;
 
 PNAME2CP os2cpFromName(char *cp);
+char* os2cpToName(unsigned long ulOS2CP);
 
 #endif // OS2CP_H

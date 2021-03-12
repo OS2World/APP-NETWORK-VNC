@@ -12,10 +12,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "os2cp.h"
 
 #ifdef DEBUG_FILE
 
-#include <os2/debug.h>
+#include "../common/debug.h"
 
 #else
 
@@ -49,6 +50,7 @@ static FNICONV         fn_iconv = NULL;
 static FNICONV_CLOSE   fn_iconv_close = NULL;
 // Flag: one of iconv DLL is used and local codepage is 437.
 static BOOL            fLocalCP437 = FALSE;
+static PSZ             pszLocalCP = "";
 
 
 
@@ -127,6 +129,8 @@ static void _init()
     fn_iconv_open  = os2_iconv_open;
     fn_iconv       = os2_iconv;
     fn_iconv_close = os2_iconv_close;
+
+    // Leave pszLocalCP="" for Uni*() API.
   }
   else
   {
@@ -144,6 +148,8 @@ static void _init()
     }
     else
       debug( "Local codepage: %u", aulCP[0] );
+
+    pszLocalCP = os2cpToName( aulCP[0] );
   }
 }
 
@@ -176,7 +182,7 @@ static BOOL _correctName(PSZ *ppszName, PCHAR pcBuf, ULONG cbBuf)
     pcBuf[cbBuf - 1] = '\0';
   }
 
-  debug( "CP name %s used instead %s", pcBuf, *ppszName );
+  debug( "CP name \"%s\" is used instead \"%s\"", pcBuf, *ppszName );
   *ppszName = pcBuf;
 
   return TRUE;
@@ -185,19 +191,21 @@ static BOOL _correctName(PSZ *ppszName, PCHAR pcBuf, ULONG cbBuf)
 static iconv_t _iconv_open(const char* tocode, const char* fromcode)
 {
   iconv_t    ic;
+  const char *_tocode = *tocode == '\0' ? (const char *)pszLocalCP : tocode;
+  const char *_fromcode = *fromcode == '\0' ? (const char *)pszLocalCP : fromcode;
 
-  ic = fn_iconv_open( tocode, fromcode );
+  ic = fn_iconv_open( _tocode, _fromcode );
 
   if ( ic == (iconv_t)-1 )
   {
     CHAR  acToCode[128];
     CHAR  acFromCode[128];
-    BOOL  fToCode = _correctName( (PSZ *)&tocode, acToCode, sizeof(acToCode) );
-    BOOL  fFromCode = _correctName( (PSZ *)&fromcode, acFromCode,
+    BOOL  fToCode = _correctName( (PSZ *)&_tocode, acToCode, sizeof(acToCode) );
+    BOOL  fFromCode = _correctName( (PSZ *)&_fromcode, acFromCode,
                                     sizeof(acFromCode) );
 
     if ( fToCode || fFromCode )
-      ic = fn_iconv_open( tocode, fromcode );
+      ic = fn_iconv_open( _tocode, _fromcode );
   }
 
   return ic;

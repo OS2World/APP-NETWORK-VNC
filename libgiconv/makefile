@@ -13,7 +13,7 @@ CC = @gcc
 
 all: $(LIBFILE)
 # all: $(LIBFILE) test.exe
-# CFLAGS = -DDEBUG
+# CFLAGS = -DDEBUG_FILE=a.dbg
 
 SRCS = geniconv.c os2cp.c os2iconv.c
 SRCS+= sys2utf8.c

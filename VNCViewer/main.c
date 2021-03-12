@@ -20,15 +20,19 @@ ULONG        cOpenWin = 0;     // Opened windows counter for:
 
 BOOL _stdcall (*pfnWinRegisterForWheelMsg)(HWND hwnd, ULONG flWindow) = NULL;
 
+#ifdef USE_AMOUSEREG
 static HMODULE         hmAMouDll = NULLHANDLE;
+#endif
 static PPIB            pib;
 
 
 BOOL _appInit()
 {
   ULONG      ulRC;
-  CHAR       acError[256];
   PTIB       tib;
+#ifdef USE_AMOUSEREG
+  CHAR       acError[256];
+#endif
 
   debugInit();
 
@@ -62,6 +66,7 @@ BOOL _appInit()
     return FALSE;
   }
 
+#ifdef USE_AMOUSEREG
   // Load AMouse API (AMouDll.dll)
   pfnWinRegisterForWheelMsg = NULL;
   ulRC = DosLoadModule( acError, sizeof(acError), _AMOUSE_DLL, &hmAMouDll );
@@ -80,6 +85,7 @@ BOOL _appInit()
     else
       debug( "AMouse API loaded" );
   }
+#endif
 
   prbarRegisterClass( hab );
   cwInit();
@@ -95,8 +101,10 @@ VOID _appDone()
   if ( hab != NULLHANDLE )
     WinTerminate( hab );
 
+#ifdef USE_AMOUSEREG
   if ( hmAMouDll != NULLHANDLE )
     DosFreeModule( hmAMouDll );
+#endif
 
   ccDone();
   cwDone();

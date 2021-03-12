@@ -272,3 +272,17 @@ PNAME2CP os2cpFromName(char *cp)
 
   return lFound == -1 ? NULL : &aName2CP[lFound];
 }
+
+char* os2cpToName(unsigned long ulOS2CP)
+{
+  ULONG		ulIdx;
+
+  for( ulIdx = 0; ulIdx < ( sizeof(aName2CP) / sizeof(struct _NAME2CP) );
+       ulIdx++ )
+  {
+    if ( aName2CP[ulIdx].ulCode == ulOS2CP )
+      return (PSZ)aName2CP[ulIdx].pszName;
+  }
+
+  return NULL;
+}

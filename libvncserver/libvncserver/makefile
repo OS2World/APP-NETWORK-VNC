@@ -29,8 +29,7 @@ SRCS = auth.c cargs.c corre.c cursor.c cutpaste.c draw.c font.c hextile.c \
 
 OBJS = $(SRCS:.c=.o)
 
-DEFS += -D_DIGI
-# -D_DIGI_NO_TCP_NODELAY
+DEFS += -D_DIGI -D_DIGI_NO_TCP_NODELAY
 
 CFLAGS = -I.. -I../common -I. $(DEFS) -march=pentium -pipe -O2
 

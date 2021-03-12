@@ -13,7 +13,7 @@ NAME = vncviewer
 # Binary file extension (dll/exe)
 EXT = exe
 
-VERSION = 0.1.9
+VERSION = 0.1.10
 DESCRIPTION = VNC Viewer
 
 # Compilation flags for ../common/utils.c

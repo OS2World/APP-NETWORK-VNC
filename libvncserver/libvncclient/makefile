@@ -12,8 +12,7 @@ OBJS = $(SRCS:.c=.o)
 #LIBS = -lpthread -llibcrypto -llibssl -lz -ljpeg
 
 DEFS = -DLIBVNCSERVER_HAVE_LIBSSL
-DEFS += -D_DIGI
-# -D_DIGI_NO_TCP_NODELAY
+DEFS += -D_DIGI -D_DIGI_NO_TCP_NODELAY
 
 #
 # _DIGI - bug fixes and OS/2 VNC Client/VNC Server related changes.

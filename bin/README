@@ -27,8 +27,7 @@ Installation
 
    or System Tray Widget ver. 0.3 (by ErOs2).
 
-3. If you are updating the VNC server, shut it down.
-   Install vnc.wpi WarpIn package. After installation, the folder "VNC" will
+3. Install vnc.wpi WarpIn package. After installation, the folder "VNC" will
    appear on the desktop. If component VNC Viewer was selected, the VNC Viewer
    template appears in the list of system templates.
 

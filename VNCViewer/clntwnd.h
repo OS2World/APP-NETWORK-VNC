@@ -1,6 +1,8 @@
 #ifndef CLNTWND_H
 #define CLNTWND_H
 
+// #ifdef USE_AMOUSEREG
+
 // WM_VNC_STATE
 // mp1 PCLNTCONN
 // mp2 ULONG - RFBSTATE_xxxxx
