@@ -8,12 +8,12 @@
 #include <os2.h>
 #include <utils.h>
 #include <rfb/rfbclient.h>
-#include <vncpm.h>
 #include "clntconn.h"
 #include "clntwnd.h"
 #include "lnchpad.h"
 #include "pswddlg.h"
 #include "resource.h"
+#include "prbar.h"
 #include "progress.h"
 #include <debug.h>
 

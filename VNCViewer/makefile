@@ -1,5 +1,7 @@
 #
-# GCC makefile
+# This makefile for GCC will be generate next files:
+#
+# ..\bin\vncviewer.exe
 #
 
 # Name for binary (without path and extension)
@@ -11,7 +13,7 @@ NAME = vncviewer
 # Binary file extension (dll/exe)
 EXT = exe
 
-VERSION = 0.1.8
+VERSION = 0.1.9
 DESCRIPTION = VNC Viewer
 
 # Compilation flags for ../common/utils.c
@@ -19,12 +21,12 @@ UTILS_CFLAGS = -DUTILS_WITH_OPENSSL
 
 # Sources
 SRCS = main.c lnchpad.c clntconn.c progress.c pswddlg.c clntwnd.c \
-       optionsdlg.c tipwin.c filexfer.c fxdlg.c csconv.c utils.c
+       optionsdlg.c tipwin.c filexfer.c fxdlg.c csconv.c prbar.c utils.c \
+       ..\common\chatwin.c
 
 # Libraries (-Lpath -lname ...)
 LIBS = -L../libvncserver -L../os2xkey -L../libgiconv -los2xkey \
-       -L../vncpm -lvncpm -llibgiconv \
-       -lvncclient -llibcrypto -llibssl -lz -ljpeg
+       -llibgiconv -lvncclient -llibcrypto -llibssl -lz -ljpeg
 
 CFLAGS = -DLIBVNCSERVER_HAVE_LIBSSL -DLIBVNCSERVER_HAVE_LIBZ \
          -DLIBVNCSERVER_HAVE_LIBJPEG
@@ -32,7 +34,7 @@ CFLAGS = -DLIBVNCSERVER_HAVE_LIBSSL -DLIBVNCSERVER_HAVE_LIBZ \
 include ../common/makefile.begin
 
 
-$(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES)  ../libvncserver/vncclient.a msgBuilding
+$(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) $(FILE_RES) ../libvncserver/vncclient.a msgBuilding
 	$(CC) $(FILE_DEF) $(LDFLAGS)
 	$(LXLITE)
 	$(RC) $(RCLFLAGS)

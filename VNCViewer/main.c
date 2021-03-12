@@ -3,9 +3,9 @@
 #define INCL_DOSMODULEMGR
 #define INCL_WIN
 #include <os2.h>
-#include <vncpm.h>
 #include "clntconn.h"
 #include "lnchpad.h"
+#include "prbar.h"
 #include "resource.h"
 #include "clntwnd.h"
 #include <debug.h>

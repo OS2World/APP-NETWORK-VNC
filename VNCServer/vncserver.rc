@@ -2,6 +2,7 @@
 #include <os2.h>
 #endif
 #include "resource.h"
+rcinclude ../common/chatwin.rc
 
 ICON     ID_ICON                 resources\server.ico
 ICON     ID_ICON_ONLINE          resources\server-online.ico

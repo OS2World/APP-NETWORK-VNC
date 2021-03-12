@@ -37,22 +37,6 @@
 #include <fcntl.h>
 #endif
 
-#ifdef WIN32
-#define write(sock,buf,len) send(sock,buf,len,0)
-#else
-#ifdef LIBVNCSERVER_HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#include <pwd.h>
-#ifdef LIBVNCSERVER_HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef LIBVNCSERVER_HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#endif
-#endif
 
 #ifdef DEBUGPROTO
 #undef DEBUGPROTO
@@ -226,7 +210,7 @@ void rfbScaledScreenUpdateRect(rfbScreenInfoPtr screen, rfbScreenInfoPtr ptr, in
              default:
                /* fixme: endianness problem? */
                for (z = 0; z < bytesPerPixel; z++)
-                 pixel_value += (srcptr2[z] << (8 * z));
+                 pixel_value += ((unsigned long)srcptr2[z] << (8 * z));
                 break;
               }
               /*
@@ -421,11 +405,14 @@ int rfbSendNewScaleSize(rfbClientPtr cl)
         pmsg.pad2 = 0;
 
         rfbLog("Sending a response to a PalmVNC style frameuffer resize event (%dx%d)\n", cl->scaledScreen->width, cl->scaledScreen->height);
+	LOCK(cl->sendMutex);
         if (rfbWriteExact(cl, (char *)&pmsg, sz_rfbPalmVNCReSizeFrameBufferMsg) < 0) {
             rfbLogPerror("rfbNewClient: write");
             rfbCloseClient(cl);
+	    UNLOCK(cl->sendMutex);
             return FALSE;
         }
+	UNLOCK(cl->sendMutex);
     }
     else
     {
@@ -435,11 +422,14 @@ int rfbSendNewScaleSize(rfbClientPtr cl)
         rmsg.framebufferWidth  = Swap16IfLE(cl->scaledScreen->width);
         rmsg.framebufferHeigth = Swap16IfLE(cl->scaledScreen->height);
         rfbLog("Sending a response to a UltraVNC style frameuffer resize event (%dx%d)\n", cl->scaledScreen->width, cl->scaledScreen->height);
+	LOCK(cl->sendMutex);
         if (rfbWriteExact(cl, (char *)&rmsg, sz_rfbResizeFrameBufferMsg) < 0) {
             rfbLogPerror("rfbNewClient: write");
             rfbCloseClient(cl);
+	    UNLOCK(cl->sendMutex);
             return FALSE;
         }
+	UNLOCK(cl->sendMutex);
     }
     return TRUE;
 }

@@ -7,11 +7,11 @@
 #define INCL_DOSDEVICES
 #define INCL_DOSDEVIOCTL
 #include <os2.h>
-#include <vncpm.h>
 #include <rfb/rfbclient.h>
 #include <utils.h>
 #include "clntconn.h"
 #include "clntwnd.h"
+#include "prbar.h"
 #include "resource.h"
 #include "linkseq.h"
 #include <debug.h>
@@ -474,7 +474,7 @@ static VOID _scanFilesClean(PDLGDATA pData)
     free( pScan );
   }
 
-  if ( pData->hwndScanProgress != NULL )
+  if ( pData->hwndScanProgress != NULLHANDLE )
   {
     WinDestroyWindow( pData->hwndScanProgress );
     pData->hwndScanProgress = NULLHANDLE;

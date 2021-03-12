@@ -1,7 +1,11 @@
+#
+# GCC makefile
+#
+
 LIB = ../vncclient.a
 
 SRCS = tls_openssl.c cursor.c listen.c rfbproto.c sockets.c vncviewer.c \
-       ../common/minilzo.c ../common/turbojpeg.c
+       ../common/crypto_openssl.c ../common/minilzo.c ../common/turbojpeg.c
 
 OBJS = $(SRCS:.c=.o)
 

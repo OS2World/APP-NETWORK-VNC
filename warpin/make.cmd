@@ -9,7 +9,7 @@ if fileWPIOutput = "" then
 
 fileScriptInput = "script.inp"
 fileScriptOutput = "script.wis"
-warpinPath = "%osdir%\install\WARPIN"
+
 
 if RxFuncQuery('SysLoadFuncs') then
 do
@@ -17,12 +17,30 @@ do
   call SysLoadFuncs
 end
 
+
+/* Query WarpIn path. */
+warpinPath = strip( SysIni( "USER", "WarpIN", "Path" ), "T", "00"x )
+if warpinPath = "ERROR:" | warpinPath = "" then
+do
+  say "WarpIN is not installed correctly"
+  exit 1
+end
+
+
+/* Make the script directory current. */
+parse source os cmd scriptPath
+savePath = directory()
+scriptPath = left( scriptPath, lastpos( "\", scriptPath ) - 1 )
+call directory scriptPath
+
+
 /* Substitution versions of the components (from BLDLEVEL signatures) in   */
 /* the script. Reads file fileScriptInput and makes file fileScriptOutput  */
 /* Replaces all switches "<!-- BL:D:\path\program.exe -->" with version of */
 /* D:\path\program.exe (bldlevel signature uses).                          */
 if makeScript( fileScriptInput, fileScriptOutput ) = 0 then
-  exit
+  exit 1
+
 
 /* Building installation package. */
 
@@ -36,11 +54,11 @@ warpinPath || "\WIC.EXE " || fileWPIOutput || " -a " || ,
 "3 -c..\bin vnckbd.sys drvins.cmd " || ,
 "4 -c..\bin kbdxkey.exe keysymdef.h " || ,
 "100 -c..\libvncserver COPYING " || ,
-"100 -c..\bin README vncpm.dll os2xkey.dll keysym\*.xk " || ,
+"100 -c..\bin README os2xkey.dll keysym\*.xk " || ,
 "-s " || fileScriptOutput
 
 call SysFileDelete fileScriptOutput
-EXIT
+EXIT 0
 
 
 makeScript: PROCEDURE

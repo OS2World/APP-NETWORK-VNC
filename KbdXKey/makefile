@@ -1,5 +1,7 @@
 #
-# GCC makefile
+# This makefile for GCC will be generate next files:
+#
+# ..\bin\kbdxkey.exe
 #
 
 # Name for binary (without path and extension)
@@ -12,13 +14,13 @@ VERSION = 1.0.0
 DESCRIPTION = Keyboard scan utility
 
 # Uncomment next line to make debug version
-DEBUGCODE = YES
+# DEBUGCODE = YES
 
 # Sources
-SRCS = kbdxkey.c namestbl.c testkey.c utils.c
+SRCS = kbdxkey.c namestbl.c testkey.c utils.c pmhelpers.c
 
 # Libraries (-Lpath -lname ...)
-LIBS = -L../vncpm -lvncpm -L../os2xkey -los2xkey
+LIBS = -L../os2xkey -los2xkey
 
 include ../common/makefile.begin
 

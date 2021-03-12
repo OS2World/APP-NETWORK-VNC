@@ -27,6 +27,7 @@
 #include "configdlg.h"
 #include "avdlg.h"
 #include "clientsdlg.h"
+#include <chatwin.h>
 #include "utils.h"
 #include "config.h"
 #include "gui.h"

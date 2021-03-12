@@ -1,5 +1,7 @@
 #
-# GCC makefile
+# This makefile for GCC will be generate next files:
+#
+# ..\bin\os2xkey.dll
 #
 
 # Name for binary (without path and extension)
@@ -26,6 +28,7 @@ include ../common/makefile.begin
 $(FILE_BIN): msgCompilation $(OBJS) $(FILE_DEF) msgBuilding
 	$(CC) $(FILE_DEF) $(LDFLAGS)
 	$(LXLITE)
+	$(HIGHMEM) $@
 
 $(FILE_DEF):
 	@cmd /c %unixroot%\\usr\\libexec\\bin\\date +"DESCRIPTION '@#Andrey Vasilkin:$(VERSION)#@##1## %F               %HOSTNAME%::::::@@$(DESCRIPTION)'" >$@

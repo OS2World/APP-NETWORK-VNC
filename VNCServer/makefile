@@ -1,5 +1,7 @@
 #
-# GCC makefile
+# This makefile for GCC will be generate next files:
+#
+# ..\bin\vncserver.exe
 #
 
 # Name for binary (without path and extension)
@@ -11,7 +13,7 @@ NAME = vncserver
 # Binary file extension (dll/exe)
 EXT = exe
 
-VERSION = 0.1.6
+VERSION = 0.1.7
 DESCRIPTION = VNC Server
 
 # Compilation flags for ../common/utils.c
@@ -19,11 +21,11 @@ UTILS_CFLAGS = -DUTILS_WITH_OPENSSL
 
 # Sources
 SRCS = main.c rfbsrv.c config.c gui.c configdlg.c avdlg.c log.c clientsdlg.c \
-       utils.c
+       utils.c ..\common\chatwin.c
 
 # Libraries (-Lpath -lname ...)
-LIBS = -L../libvncserver -L../os2xkey -los2xkey -L../vncpm \
-       -lvncpm -lvncserver -llibcrypto -llibssl -lz -ljpeg -lpng1616_dll
+LIBS = -L../libvncserver -L../os2xkey -los2xkey -lvncserver -llibcrypto \
+       -llibssl -lz -ljpeg -lpng1616_dll
 
 CFLAGS = -DVERSION=\"$(VERSION)\"
 

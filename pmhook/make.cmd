@@ -1,1 +1,1 @@
-nmake /f makefile.vac
+nmake /f makefile

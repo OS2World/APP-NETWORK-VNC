@@ -10,7 +10,6 @@
 AUTOR = Andrey Vasilkin
 VERSION = 1.0.2
 COMMENT = VNC Viewer WPS Class
-MSGPREF = [WPS Class]
 
 DLLFILE = ..\bin\vncv.dll
 LNKFILE = vncv.lnk
@@ -43,7 +42,7 @@ OBJS = $(SRCS:.c=.obj)
 .EXTENSIONS : .ih .idl .res .rc .dlg .hlp .ipf
 
 help: .symbolic
-    @echo $(MSGPREF) The following pseudotargets are supported:
+    @echo The following pseudotargets are supported:
     @echo.
     @echo  all       - builds the WPS class DLL
     @echo  install   - builds the WPS class DLL, installs it
@@ -59,8 +58,7 @@ deinstall: .symbolic
     -@call install.cmd D
 
 
-$(DLLFILE): infCompiling $(OBJS) vncv.lnk vncv.res
-  @echo $(MSGPREF) Linking: $@
+$(DLLFILE): $(OBJS) vncv.lnk vncv.res
   wlink @$(LNKFILE)
   wrc -q vncv.res $@
 
@@ -89,15 +87,12 @@ debug.obj: ..\common\debug.c
   @sc -s"c" $(SCFLAGS) $< 
 
 .rc.res:
-  @echo $(MSGPREF) Compiling resource: $@
   @wrc -r -q -i=$(INCPATH) $[*
 
 .ipf.hlp:
-  @echo $(MSGPREF) Compiling help: $@
   ipfc $< $*.hlp /W3 >nul
 
 $(LNKFILE): .ALWAYS
-  @echo $(MSGPREF) Creating file: $@
   @%create $@
   @%append $@ NAME $(DLLFILE)
   @%append $@ SYSTEM os2v2_dll INITINSTANCE TERMINSTANCE
@@ -126,11 +121,7 @@ $(LNKFILE): .ALWAYS
   @%append $@ EXPORT M_vncvClassData
   @%append $@ EXPORT M_vncvNewClass
 
-infCompiling: .SYMBOLIC
-  @echo $(MSGPREF) Compiling: $(COMMENT) $(VERSION) ...
-
 clean: .symbolic
-  @echo $(MSGPREF) Cleaning up
   if exist vncv.hlp del vncv.hlp
   @rm -f *.obj vncv.h *.ih *.err *.res
   if exist $(LNKFILE) del $(LNKFILE)

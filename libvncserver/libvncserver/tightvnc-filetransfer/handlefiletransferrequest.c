@@ -21,10 +21,8 @@
  * Email ID	: rokumar@novell.com
  * Date		: 14th July 2005
  */
- 
-#ifndef _MSC_VER
-#include <pwd.h>
-#endif /* _MSC_VER */
+
+#include <rfb/rfbconfig.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,12 +30,13 @@
 #if LIBVNCSERVER_HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifndef _MSC_VER
+#if LIBVNCSERVER_HAVE_DIRENT_H
 #include <dirent.h>
-#ifndef _DIGI
+#endif
+//#ifndef WIN32
+#if !defined(WIN32) && !defined(_DIGI)
 #include <pthread.h>
-#endif // _DIGI
-#endif /* _MSC_VER */
+#endif /* WIN32 */
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <limits.h>
@@ -47,6 +46,13 @@
 #include "filetransfermsg.h"
 #include "handlefiletransferrequest.h"
 
+#ifdef WIN32
+typedef unsigned int uid_t;
+#include <shlobj.h>
+#else
+#include <pwd.h>
+#endif /* WIN32 */
+
 
 #ifdef _DIGI
 #define pthread_create(a,b,c,d) 0
@@ -54,12 +60,12 @@
 #define pthread_mutex_unlock(a)
 #define pthread_t int
 #else
-pthread_mutex_t fileDownloadMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t fileDownloadMutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
-rfbBool fileTransferEnabled = TRUE;
-rfbBool fileTransferInitted = FALSE;
-char ftproot[PATH_MAX];
+static rfbBool fileTransferEnabled = TRUE;
+static rfbBool fileTransferInitted = FALSE;
+static char ftproot[PATH_MAX];
 
 
 /******************************************************************************
@@ -82,7 +88,11 @@ void
 InitFileTransfer()
 {
 	char* userHome = NULL;
+#ifdef WIN32
+	uid_t uid = 0;
+#else
 	uid_t uid = geteuid();
+#endif
 
 	if(fileTransferInitted)
 		return;
@@ -169,8 +179,23 @@ SetFtpRoot(char* path)
 char* 
 GetHomeDir(uid_t uid)
 {
-	struct passwd *pwEnt = NULL;
 	char *homedir = NULL;
+#ifdef WIN32
+    PWSTR profileDir = NULL;
+    if (SHGetKnownFolderPath(&FOLDERID_Profile, 0, NULL, &profileDir) != S_OK)
+    {
+        return NULL;
+    }
+
+	int homedirlen = WideCharToMultiByte(CP_UTF8, 0, profileDir, -1, homedir, 0, NULL, NULL);
+	if (homedirlen<=0 || (homedir = malloc(homedirlen)) == NULL)
+	{
+		return NULL;
+	}
+	WideCharToMultiByte(CP_UTF8, 0, profileDir, -1, homedir, homedirlen, NULL, NULL);
+	CoTaskMemFree(profileDir);
+#else
+	struct passwd *pwEnt = NULL;
 
 	pwEnt = getpwuid (uid);
 	if (pwEnt == NULL)
@@ -179,6 +204,7 @@ GetHomeDir(uid_t uid)
 	if(pwEnt->pw_dir != NULL) {
 		homedir = strdup (pwEnt->pw_dir);
 	}
+#endif
 
 	return homedir;
 }
@@ -327,7 +353,9 @@ HandleFileListRequest(rfbClientPtr cl, rfbTightClientRec* data)
     	return;
 	}	
 
+    LOCK(cl->sendMutex);
     rfbWriteExact(cl, fileListMsg.data, fileListMsg.length); 
+    UNLOCK(cl->sendMutex);
 
     FreeFileTransferMsg(fileListMsg);
 }
@@ -471,7 +499,9 @@ SendFileDownloadLengthErrMsg(rfbClientPtr cl)
 		return;
 	}
 
+	LOCK(cl->sendMutex);
 	rfbWriteExact(cl, fileDownloadErrMsg.data, fileDownloadErrMsg.length);
+	UNLOCK(cl->sendMutex);
 
 	FreeFileTransferMsg(fileDownloadErrMsg);
 }
@@ -495,12 +525,15 @@ RunFileDownloadThread(void* client)
 		pthread_mutex_unlock(&fileDownloadMutex);
 		
 		if((fileDownloadMsg.data != NULL) && (fileDownloadMsg.length != 0)) {
+		        LOCK(cl->sendMutex);
 			if(rfbWriteExact(cl, fileDownloadMsg.data, fileDownloadMsg.length) < 0)  {
 				rfbLog("File [%s]: Method [%s]: Error while writing to socket \n"
 						, __FILE__, __FUNCTION__);
 				FreeFileTransferMsg(fileDownloadMsg);
+				UNLOCK(cl->sendMutex);
 				return NULL;
 			}
+			UNLOCK(cl->sendMutex);
 			FreeFileTransferMsg(fileDownloadMsg);
 		}
 	} while(rtcp->rcft.rcfd.downloadInProgress == TRUE);
@@ -516,7 +549,9 @@ HandleFileDownload(rfbClientPtr cl, rfbTightClientPtr rtcp)
 	memset(&fileDownloadMsg, 0, sizeof(FileTransferMsg));
 	fileDownloadMsg = ChkFileDownloadErr(cl, rtcp);
 	if((fileDownloadMsg.data != NULL) && (fileDownloadMsg.length != 0)) {
+	        LOCK(cl->sendMutex);
 		rfbWriteExact(cl, fileDownloadMsg.data, fileDownloadMsg.length);
+		UNLOCK(cl->sendMutex);
 		FreeFileTransferMsg(fileDownloadMsg);
 		return;
 	}
@@ -530,7 +565,9 @@ HandleFileDownload(rfbClientPtr cl, rfbTightClientPtr rtcp)
 				__FILE__, __FUNCTION__);
 		
 		if((ftm.data != NULL) && (ftm.length != 0)) {
+		        LOCK(cl->sendMutex);
 			rfbWriteExact(cl, ftm.data, ftm.length);
+			UNLOCK(cl->sendMutex);
 			FreeFileTransferMsg(ftm);
 			return;
 		}
@@ -734,7 +771,9 @@ SendFileUploadLengthErrMsg(rfbClientPtr cl)
 		return;
 	}
 
+	LOCK(cl->sendMutex);
 	rfbWriteExact(cl, fileUploadErrMsg.data, fileUploadErrMsg.length);
+	UNLOCK(cl->sendMutex);
 	FreeFileTransferMsg(fileUploadErrMsg);
 }
 
@@ -750,7 +789,9 @@ HandleFileUpload(rfbClientPtr cl, rfbTightClientPtr rtcp)
 
 	fileUploadErrMsg = ChkFileUploadErr(cl, rtcp);
 	if((fileUploadErrMsg.data != NULL) && (fileUploadErrMsg.length != 0)) {
+	        LOCK(cl->sendMutex);
 		rfbWriteExact(cl, fileUploadErrMsg.data, fileUploadErrMsg.length);
+		UNLOCK(cl->sendMutex);
 		FreeFileTransferMsg(fileUploadErrMsg);
 	}
 }
@@ -791,8 +832,7 @@ HandleFileUploadDataRequest(rfbClientPtr cl, rfbTightClientPtr rtcp)
 	msg.fud.realSize = Swap16IfLE(msg.fud.realSize);
 	msg.fud.compressedSize = Swap16IfLE(msg.fud.compressedSize);
 	if((msg.fud.realSize == 0) && (msg.fud.compressedSize == 0)) {
-		if((n = rfbReadExact(cl, (char*)&(rtcp->rcft.rcfu.mTime), sizeof(unsigned 
-		long))) <= 0) {
+		if((n = rfbReadExact(cl, (char*)&(rtcp->rcft.rcfu.mTime), 4)) <= 0) {
 			
 			if (n < 0)
 				rfbLog("File [%s]: Method [%s]: Error while reading FileUploadRequestMsg\n",
@@ -833,7 +873,9 @@ HandleFileUploadDataRequest(rfbClientPtr cl, rfbTightClientPtr rtcp)
 		ftm = GetFileUploadCompressedLevelErrMsg();
 
 		if((ftm.data != NULL) && (ftm.length != 0)) {
+		        LOCK(cl->sendMutex);
 			rfbWriteExact(cl, ftm.data, ftm.length);
+			UNLOCK(cl->sendMutex);
 			FreeFileTransferMsg(ftm);
 		}
 
@@ -868,7 +910,9 @@ HandleFileUploadWrite(rfbClientPtr cl, rfbTightClientPtr rtcp, char* pBuf)
 	ftm = ChkFileUploadWriteErr(cl, rtcp, pBuf);
 
 	if((ftm.data != NULL) && (ftm.length != 0)) {
+	        LOCK(cl->sendMutex);
 		rfbWriteExact(cl, ftm.data, ftm.length);
+		UNLOCK(cl->sendMutex);
 		FreeFileTransferMsg(ftm);
 	}
 }
@@ -980,7 +1024,13 @@ HandleFileCreateDirRequest(rfbClientPtr cl, rfbTightClientPtr rtcp)
 
 	msg.fcdr.dNameLen = Swap16IfLE(msg.fcdr.dNameLen);
 
-	/* TODO :: chk if the dNameLen is greater than PATH_MAX */	
+	/* chk if the dNameLen is greater than PATH_MAX */
+	if(msg.fcdr.dNameLen >= sizeof(dirName)-1) {
+	    rfbLog("File [%s]: Method [%s]: Error directory name is too long.\n",
+	            __FILE__, __FUNCTION__);
+	    rfbCloseClient(cl);
+	    return;
+	}
 	
 	if((n = rfbReadExact(cl, dirName, msg.fcdr.dNameLen)) <= 0) {
 		

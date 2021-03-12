@@ -1347,7 +1347,7 @@ static MRESULT EXPENTRY _dlgPageLogProc(HWND hwnd, ULONG msg,
 
 static VOID _wmPageProgInitDlg(HWND hwnd)
 {
-  IPT        iptOffset = NULL;
+  IPT        iptOffset = 0;
   HWND       hwndCtl = WinWindowFromID( hwnd, IDMLE_PROGRAMS );
   ULONG      cbText;
   PCHAR      pcText;

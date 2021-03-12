@@ -1,7 +1,7 @@
 #
 # This makefile for Open Watcom will be generate next files:
 #
-# VNCKBD.SYS
+# ..\bin\vnckbd.sys
 #
 
 # BINPATH - binaries output path.

@@ -1,3 +1,10 @@
+#
+# This makefile for GCC be generate next files:
+#
+# vncclient.a
+# vncserver.a
+#
+
 all: vncclient.a vncserver.a
 
 vncclient.a:

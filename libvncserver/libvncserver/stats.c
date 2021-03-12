@@ -26,10 +26,6 @@
 
 #include <rfb/rfb.h>
 
-#ifdef _MSC_VER
-#define snprintf _snprintf /* Missing in MSVC */
-#endif
-
 char *messageNameServer2Client(uint32_t type, char *buf, int len);
 char *messageNameClient2Server(uint32_t type, char *buf, int len);
 char *encodingName(uint32_t enc, char *buf, int len);
@@ -82,6 +78,7 @@ char *messageNameClient2Server(uint32_t type, char *buf, int len) {
     case rfbTextChat:                 snprintf(buf, len, "TextChat"); break;
     case rfbPalmVNCSetScaleFactor:    snprintf(buf, len, "PalmVNCSetScale"); break;
     case rfbXvp:                      snprintf(buf, len, "XvpClientMessage"); break;
+    case rfbSetDesktopSize:           snprintf(buf, len, "SetDesktopSize"); break;
     default:
         snprintf(buf, len, "cli2svr-0x%08X", type);
 
@@ -126,6 +123,7 @@ char *encodingName(uint32_t type, char *buf, int len) {
 
     case rfbEncodingLastRect:           snprintf(buf, len, "LastRect");    break;
     case rfbEncodingNewFBSize:          snprintf(buf, len, "NewFBSize");   break;
+    case rfbEncodingExtDesktopSize:     snprintf(buf, len, "ExtendedDesktopSize"); break;
     case rfbEncodingKeyboardLedState:   snprintf(buf, len, "LedState");    break;
     case rfbEncodingSupportedMessages:  snprintf(buf, len, "SupportedMessage");  break;
     case rfbEncodingSupportedEncodings: snprintf(buf, len, "SupportedEncoding"); break;

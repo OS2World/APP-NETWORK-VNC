@@ -4,8 +4,8 @@
 #define INCL_DOSERRORS
 #define INCL_WIN
 #include <os2.h>
-#include <vncpm.h>
 #include "os2xkey.h"
+#include "pmhelpers.h"
 #include "namestbl.h"
 #include "resource.h"
 #include <utils.h>

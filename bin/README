@@ -1,3 +1,4 @@
+
                             VNC Client And Server
 
 Contents
@@ -7,40 +8,29 @@ Contents
    - VNC Viewer - client to access remote desktop service.
    - VNC Server - graphical desktop sharing.
    - Keyboard Map Utility.
-   - Known Issues.
-   - Autor.
 
 
 
 Installation
 ------------
 
-Install crypto10.dll, gcc1.dll, gcc446.dll, jpeg.dll, jpeg8.dll, libcx0.dll,
-png1616.dll, pthr01.dll, ssl10.dll, z.dll and z1.dll files into one of the
-directories on your "LIBPATH" (e.g. 'x:\os2\dll'). You can download archives
-with these files from:
+1. You need RPM/YUM. Type command:
 
-    http://rpm.netlabs.org/release/00/zip/libc-0_6_6-26_oc00.zip
-    http://rpm.netlabs.org/release/00/zip/gcc-4_9_2_1-3_oc00.zip
-    http://rpm.netlabs.org/release/00/zip/openssl-1_0_0r-1_oc00.zip
-    http://rpm.netlabs.org/release/00/zip/zlib-1_2_11-1_oc00.zip
-    http://rpm.netlabs.org/release/00/zip/pthread-20150408-19_oc00.zip
-    http://rpm.netlabs.org/release/00/zip/libjpeg-8c-1_oc00.zip
+       yum install libc libgcc1 openssl zlib pthread libjpeg libpng
 
-If you use RPM/YUM, just run this command:
+   or use Arca Noae Package Manager to install these packages.
 
-    yum install libc libgcc1 openssl zlib pthread libjpeg libpng
+2. It is recommended to use Extended System Tray Widget (by Dmik) for
+   eCenter/XCenter with VNC Server:
 
-It is recommended to use Extended System Tray Widget (by Dmik) for
-eCenter/XCenter with VNC Server:
+       ftp://ftp.netlabs.org/pub/qt4/xsystray/xsystray-0_1_1.wpi
 
-  ftp://ftp.netlabs.org/pub/qt4/xsystray/xsystray-0_1_1.wpi
+   or System Tray Widget ver. 0.3 (by ErOs2).
 
-or System Tray Widget ver. 0.3 (by ErOs2).
-
-Install vnc.wpi WarpIn package. After installation, the folder "VNC" will
-appear on the desktop. If component VNC Viewer was selected, the VNC Viewer
-template appears in the list of system templates.
+3. If you are updating the VNC server, shut it down.
+   Install vnc.wpi WarpIn package. After installation, the folder "VNC" will
+   appear on the desktop. If component VNC Viewer was selected, the VNC Viewer
+   template appears in the list of system templates.
 
 
 VNC Viewer - client to access remote desktop service
@@ -55,7 +45,7 @@ chat.
 
 Command line switches for VNC Viewer
 
-  vncviewer.exe [[-h|-l] [-ravcdeoq] ...]
+  vncviewer.exe [[-h|-l] [-ravcdeoqtER] ...]
 
   -h host[:display]          - VNC server. Can be specified multiple times.
   -l [ipaddr|*|any][:port]   - The addresses and port where VNC Viewer will
@@ -78,7 +68,9 @@ Command line switches for VNC Viewer
   -t "Window title"          - Window title.
   -E charset                 - Server character encoding (for filenames, chat).
 
-  -R                         - Reset fonts & colors in the dialog boxes.
+  -R                         - Reset fonts & colors in the dialog boxes
+                               modified via the Font Palette and the
+                               Color Palette.
 
   For all the unspecified switches -ravcdeoq previously stored in GUI or the
   default values will be used.
@@ -119,11 +111,11 @@ Command line switches for VNC Server
 
 Web Browser Access
 
-Users may access their desktops from any computer with any modern Java-enabled
-or HTML5-capable Web browser, without installing any software on the client
-computer. VNC displays a desktop within a browser window by running a Java
-applet or uses noVNC Open Source VNC client. noVNC is a browser based VNC
-client implemented using HTML5 Canvas and WebSockets.
+Users may access their desktops from any computer with any modern HTML5-capable
+Web browser, without installing any software on the client computer. VNC
+displays a desktop within a browser window uses noVNC Open Source VNC client.
+noVNC is a browser based VNC client implemented using HTML5 Canvas and
+WebSockets.
 
 
 Enabling WebSockets encryption
@@ -179,23 +171,12 @@ Note that not all other VNC clients/servers supports national keyboards.
 For more detailed information see RFC 6143, 7.5.4. KeyEvent.
 
 
-Known Issues
-------------
+---
 
-- VNC Server: In the non-View-Only mode on an unencrypted WebSockets
-  connection, the client is disconnected.
-
-- You may have to accept a self-signed certificate for WebSockets before using
-  an encrypted connection by entering a similar address in your browser:
-
-    https://myhost:5900/
-
-
-Autor
------
+http://os2.snc.ru/product-VNC.html
 
 Donations are most welcome!
 PayPal: digi@os2.snc.ru
 
-Andrey Vasilkin, 2017-2019
+Andrey Vasilkin, 2017-2020
 E-mail: digi@os2.snc.ru

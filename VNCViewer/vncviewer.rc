@@ -2,7 +2,8 @@
 #include <os2.h>
 #endif
 #include "resource.h"
-#include <vncpm.h>
+rcinclude prbar.rc
+rcinclude ../common/chatwin.rc
 
 ICON     IDICON_VIEWWIN           resources\viewer.ico
 ICON     IDICON_FILE              resources\file.ico

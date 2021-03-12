@@ -9,7 +9,7 @@
 #include <utils.h>
 #include "clntconn.h"
 #include "lnchpad.h"  // lpOpenDlg(), lpStoreWinRect()
-#include <vncpm.h>
+#include <chatwin.h>
 #include "clntwnd.h"
 #include "pmwinmou.h"
 #include "resource.h"

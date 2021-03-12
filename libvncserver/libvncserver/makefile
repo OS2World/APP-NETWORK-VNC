@@ -1,3 +1,7 @@
+#
+# GCC makefile
+#
+
 LIB = ../vncserver.a
 
 # rfbcrypto_gnutls.c rfbcrypto_polarssl.c rfbssl_gnutls.c rfbcrypto_included.c
@@ -11,7 +15,7 @@ SRCS = auth.c cargs.c corre.c cursor.c cutpaste.c draw.c font.c hextile.c \
        zrlepalettehelper.c zrleoutstream.c zrlepalettehelper.c \
        ../common/d3des.c ../common/vncauth.c ../common/minilzo.c \
        ../common/turbojpeg.c ../common/sha1.c \
-       rfbssl_openssl.c ../common/rfbcrypto_openssl.c
+       rfbssl_openssl.c ../common/crypto_openssl.c
 
 #       rfbssl_gnutls.c ../common/rfbcrypto_gnutls.c
 #       ../common/rfbcrypto_included.c \

@@ -1,55 +1,41 @@
 #
-# GCC makefile
+# This makefile for IBM C Compiler (VAC) will be generate next files:
+#
+# vncshook.dll
 #
 
-NAME = vncshook
+NAME    = vncshook
+AUTOR   = Andrey Vasilkin
 VERSION = 1.0.1
-DLLFILE = $(NAME).dll
-# DEBUGCODE = YES
+COMMENT = Presentation Manager hook library
 
-DESCRIPTION = $(NAME) $(VERSION)
+DLLFILE = $(NAME).dll
 DEFFILE = $(NAME).def
 
-CC = @gcc
-RC = @rc
+CC      = icc -q -Ss -W1 -O
+CCDLL   = $(CC) -Ge- /Gm+
 
-SRCS = vncshook.c
+OBJS    = vncshook.obj
 
-LIBS = 
-
-CFLAGS = $(LIBS) -Wall -idirafter /@unixroot/usr/include/os2tk45 -I. \
-         -DUSE_OS2_TOOLKIT_HEADERS -DDLLNAME=\"$(NAME)\" -Wno-format \
-         -c -O3 -Zmtd -Zomf -nostdlib -los2
-
-ifeq ($(DEBUGCODE),YES)
-SRCS += debug.c
-CFLAGS += -DDEBUG_FILE=\"$(NAME).dbg\"
-DESCRIPTION += (debug)
-endif
-
-OBJS = $(SRCS:.c=.o)
-
-all: $(DLLFILE)
+.all: $(DLLFILE)
 
 $(DLLFILE): $(OBJS) $(DEFFILE)
-	$(CC) $(DEFFILE) -Zdll -Zomf -Zmtd $(OBJS) $(LIBS)
-#$@
-#	@lxlite /CS $@ >nul
-
-.c.obj: .AUTODEPEND
-	$(CC) $(CFLAGS) -c $<
+  $(CCDLL) $(OBJS) /Fe$(DLLFILE) $(DEFFILE) /b"/ex:1"
 
 $(DEFFILE):
-	@echo LIBRARY $(NAME) INITGLOBAL TERMGLOBAL >$@
-	@echo EXETYPE OS2 >>$@
-	@%unixroot%\usr\libexec\bin\date +"DESCRIPTION '@#Andrey Vasilkin:$(VERSION)#@##1## %F               %HOSTNAME%::::::@@$(DESCRIPTION)'" >>$@
-	@echo CODE LOADONCALL EXECUTEREAD NOIOPL NONCONFORMING >>$@
-	@echo DATA LOADONCALL READWRITE NOIOPL SINGLE SHARED >>$@
-#	@echo EXPORTS >>$@
-#	@echo   pmhInputHookProc >>$@
-#	@echo   pmhInit >>$@
-#	@echo   pmhDone >>$@
+  @echo LIBRARY $(NAME) INITGLOBAL TERMGLOBAL >$@
+  @echo EXETYPE OS2 >>$@
+  @%%unixroot%%\usr\libexec\bin\date.exe +"DESCRIPTION '@#$(AUTOR):$(VERSION)#@##1## %%F %%T      %%HOSTNAME%%::ru:RUS:::@@$(COMMENT)'" >>$@
+  @echo CODE LOADONCALL EXECUTEREAD NOIOPL NONCONFORMING >>$@
+  @echo DATA LOADONCALL READWRITE NOIOPL SINGLE SHARED >>$@
+  @echo IMPORTS >>$@
+  @echo     stKbdPacket = PMWIN.174 >>$@
 
+
+.c.obj:
+  $(CCDLL) -c $*.c
 
 clean:
-	@rm -f $(OBJS) $(DEFFILE) $(DLLFILE) $(NAME).dbg
+  @if exist $(DLLFILE) del $(DLLFILE)
+  @if exist $(DEFFILE) del $(DEFFILE)
+  @if exist *.obj del *.obj

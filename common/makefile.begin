@@ -8,6 +8,7 @@ FILE_RES = $(NAME).res
 CC = gcc
 RC = rc16
 AR = ar
+HIGHMEM = @highmem -b
 
 LXLITE = @lxlite /CS $(FILE_BIN)
 
